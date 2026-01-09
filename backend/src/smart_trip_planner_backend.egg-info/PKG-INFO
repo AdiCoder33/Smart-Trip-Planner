@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: smart-trip-planner-backend
+Version: 0.1.0
+Requires-Python: >=3.12
+Requires-Dist: Django<5.1,>=5.0
+Requires-Dist: djangorestframework<3.16,>=3.15
+Requires-Dist: djangorestframework-simplejwt<5.4,>=5.3
+Requires-Dist: drf-spectacular<0.28,>=0.27
+Requires-Dist: django-environ<0.12,>=0.11
+Requires-Dist: django-cors-headers<4.4,>=4.3
+Requires-Dist: psycopg2-binary<3.0,>=2.9
+Requires-Dist: gunicorn<22.0,>=21.2
+Provides-Extra: dev
+Requires-Dist: pytest<9.0,>=8.0; extra == "dev"
+Requires-Dist: pytest-django<5.0,>=4.8; extra == "dev"
+Requires-Dist: model-bakery<2.0,>=1.17; extra == "dev"
+Requires-Dist: black<25.0,>=24.0; extra == "dev"
+Requires-Dist: ruff<0.6,>=0.5; extra == "dev"

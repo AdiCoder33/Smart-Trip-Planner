@@ -1,0 +1,30 @@
+name: smart_trip_planner
+version: 0.1.0+1
+description: Smart Trip Planner Flutter app
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
+  dio: ^5.5.0
+  connectivity_plus: ^6.0.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  flutter_secure_storage: ^9.2.2
+  uuid: ^4.4.0
+
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  bloc_test: ^9.1.6
+  mocktail: ^1.0.4
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
