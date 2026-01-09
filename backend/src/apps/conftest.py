@@ -1,7 +1,5 @@
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
-
 from apps.accounts.models import User
 
 
@@ -17,6 +15,5 @@ def user(db):
 
 @pytest.fixture
 def auth_client(api_client, user):
-    token = RefreshToken.for_user(user)
-    api_client.credentials(HTTP_AUTHORIZATION=f"Bearer {token.access_token}")
+    api_client.force_authenticate(user=user)
     return api_client

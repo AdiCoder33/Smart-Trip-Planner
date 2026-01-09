@@ -6,7 +6,7 @@ from pathlib import Path
 
 def main() -> None:
     base_dir = Path(__file__).resolve().parent
-    sys.path.append(str(base_dir / "src"))
+    sys.path.insert(0, str(base_dir / "src"))
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.dev")
     try:
         from django.core.management import execute_from_command_line

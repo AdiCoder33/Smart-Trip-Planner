@@ -1,6 +1,5 @@
 import pytest
 from rest_framework.test import APIClient
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from apps.accounts.models import User
 from apps.trips.models import TripMember, TripRole, TripStatus
@@ -39,8 +38,7 @@ def test_trip_permissions_viewer_cannot_update_owner_can_update(auth_client, use
     )
 
     viewer_client = APIClient()
-    viewer_token = RefreshToken.for_user(viewer)
-    viewer_client.credentials(HTTP_AUTHORIZATION=f"Bearer {viewer_token.access_token}")
+    viewer_client.force_authenticate(user=viewer)
 
     viewer_resp = viewer_client.patch(
         f"/api/trips/{trip_id}", {"title": "Rome Updated"}, format="json"

@@ -52,3 +52,4 @@ flutter analyze
 - API docs: `http://localhost:8000/api/docs`
 - iOS simulator base URL: `http://localhost:8000`
 - Update `backend/.env` for local secrets and database settings.
+- If using Android emulator, add `10.0.2.2` to `ALLOWED_HOSTS` in `backend/.env`.

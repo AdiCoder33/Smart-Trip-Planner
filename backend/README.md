@@ -11,6 +11,20 @@ docker compose up --build
 
 API docs: `http://localhost:8000/api/docs`
 
+## Email invites
+Default email backend is console (emails show in logs). For SMTP, set:
+```
+EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend
+EMAIL_HOST=smtp.example.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=your-user
+EMAIL_HOST_PASSWORD=your-password
+EMAIL_USE_TLS=1
+DEFAULT_FROM_EMAIL=no-reply@your-domain.com
+```
+
+Invite emails include a token to paste into the app's Accept Invite screen.
+
 ## Run tests
 ```bash
 cd backend

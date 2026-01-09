@@ -2,7 +2,9 @@
 import uuid
 
 from django.db import migrations, models
-import django.contrib.auth.models
+from django.utils.translation import gettext_lazy as _
+
+from apps.accounts.managers import UserManager
 
 
 class Migration(migrations.Migration):
@@ -25,12 +27,12 @@ class Migration(migrations.Migration):
                 ("is_active", models.BooleanField(default=True)),
                 ("is_staff", models.BooleanField(default=False)),
                 ("date_joined", models.DateTimeField(auto_now_add=True)),
-                ("groups", models.ManyToManyField(blank=True, related_name="user_set", related_query_name="user", to="auth.group", help_text="The groups this user belongs to.")),
-                ("user_permissions", models.ManyToManyField(blank=True, related_name="user_set", related_query_name="user", to="auth.permission", help_text="Specific permissions for this user.")),
+                ("groups", models.ManyToManyField(blank=True, related_name="user_set", related_query_name="user", to="auth.group", verbose_name=_("groups"), help_text=_("The groups this user belongs to. A user will get all permissions granted to each of their groups."))),
+                ("user_permissions", models.ManyToManyField(blank=True, related_name="user_set", related_query_name="user", to="auth.permission", verbose_name=_("user permissions"), help_text=_("Specific permissions for this user."))),
             ],
             options={"abstract": False},
             managers=[
-                ("objects", django.contrib.auth.models.UserManager()),
+                ("objects", UserManager()),
             ],
         ),
     ]

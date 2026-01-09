@@ -15,7 +15,7 @@ COPY manage.py /app/manage.py
 COPY entrypoint.sh /app/entrypoint.sh
 
 RUN pip install --upgrade pip \
-    && pip install . \
+    && pip install .[dev] \
     && chmod +x /app/entrypoint.sh
 
 EXPOSE 8000

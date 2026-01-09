@@ -11,6 +11,17 @@ env = environ.Env(
     ALLOWED_HOSTS=(list, []),
     CORS_ALLOW_ALL_ORIGINS=(bool, False),
     LOG_LEVEL=(str, "INFO"),
+    RATE_LIMIT_ANON_PER_MINUTE=(int, 60),
+    RATE_LIMIT_USER_PER_MINUTE=(int, 120),
+    INVITE_EXPIRES_HOURS=(int, 72),
+    EMAIL_BACKEND=(str, "django.core.mail.backends.console.EmailBackend"),
+    EMAIL_HOST=(str, ""),
+    EMAIL_PORT=(int, 587),
+    EMAIL_HOST_USER=(str, ""),
+    EMAIL_HOST_PASSWORD=(str, ""),
+    EMAIL_USE_TLS=(bool, True),
+    DEFAULT_FROM_EMAIL=(str, "no-reply@smart-trip-planner.local"),
+    INVITE_EMAIL_SUBJECT=(str, "You're invited to a trip"),
 )
 
 environ.Env.read_env(BASE_DIR / ".env")
@@ -38,8 +49,10 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "apps.common.middleware.RequestIdMiddleware",
+    "apps.common.middleware.RateLimitMiddleware",
     "apps.common.middleware.RequestLoggingMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
@@ -118,12 +131,33 @@ SIMPLE_JWT = {
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Smart Trip Planner API",
-    "DESCRIPTION": "Phase 1 API",
-    "VERSION": "1.0.0",
+    "DESCRIPTION": "Phase 2 API",
+    "VERSION": "2.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
 CORS_ALLOW_ALL_ORIGINS = env.bool("CORS_ALLOW_ALL_ORIGINS")
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "LOCATION": "smart-trip-planner-cache",
+    }
+}
+
+RATE_LIMIT_ANON_PER_MINUTE = env.int("RATE_LIMIT_ANON_PER_MINUTE")
+RATE_LIMIT_USER_PER_MINUTE = env.int("RATE_LIMIT_USER_PER_MINUTE")
+
+INVITE_EXPIRES_HOURS = env.int("INVITE_EXPIRES_HOURS")
+INVITE_EMAIL_SUBJECT = env("INVITE_EMAIL_SUBJECT")
+
+EMAIL_BACKEND = env("EMAIL_BACKEND")
+EMAIL_HOST = env("EMAIL_HOST")
+EMAIL_PORT = env.int("EMAIL_PORT")
+EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS")
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL")
 
 LOGGING = {
     "version": 1,
@@ -135,7 +169,7 @@ LOGGING = {
     },
     "formatters": {
         "verbose": {
-            "format": "%(asctime)s %(levelname)s [%(request_id)s] %(name)s: %(message)s",
+            "format": "%(asctime)s %(levelname)s [%(request_id)s] [%(user_id)s] %(name)s: %(message)s",
         },
     },
     "handlers": {
