@@ -16,6 +16,6 @@ abstract class ChatRepository {
   Future<void> cacheLocalMessages(String tripId, List<ChatMessageEntity> messages);
   Future<void> upsertLocalMessage(ChatMessageEntity message);
   Future<Stream<ChatSocketEvent>> connect({required String tripId});
-  void sendMessageSocket({required String content, required String clientId});
+  Future<void> sendMessageSocket({required String content, required String clientId});
   Future<void> disconnect();
 }

@@ -69,12 +69,26 @@ class TripChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         text = (content.get("content") or "").strip()
-        if not text:
+        encrypted_content = (content.get("encrypted_content") or "").strip()
+        if not text and not encrypted_content:
             await self._send_error("INVALID_MESSAGE", "Content is required.")
             return
 
+        encryption_version = content.get("encryption_version")
+        if encrypted_content:
+            if encryption_version is None:
+                encryption_version = 1
+            else:
+                try:
+                    encryption_version = int(encryption_version)
+                except (TypeError, ValueError):
+                    await self._send_error("INVALID_MESSAGE", "encryption_version must be an integer.")
+                    return
+        else:
+            encryption_version = None
+
         client_id = content.get("client_id")
-        message, created = await self._create_message(text, client_id)
+        message, created = await self._create_message(text, encrypted_content, encryption_version, client_id)
         from .serializers import ChatMessageSerializer
 
         payload = ChatMessageSerializer(message).data
@@ -136,7 +150,7 @@ class TripChatConsumer(AsyncJsonWebsocketConsumer):
         ).exists()
 
     @database_sync_to_async
-    def _create_message(self, text, client_id):
+    def _create_message(self, text, encrypted_content, encryption_version, client_id):
         from .models import ChatMessage
 
         if client_id:
@@ -155,7 +169,9 @@ class TripChatConsumer(AsyncJsonWebsocketConsumer):
         message = ChatMessage.objects.create(
             trip=self.trip,
             sender=self.user,
-            content=text,
+            content=text or "",
+            encrypted_content=encrypted_content or None,
+            encryption_version=encryption_version,
             client_id=client_id,
         )
         message = ChatMessage.objects.select_related("sender").get(id=message.id)

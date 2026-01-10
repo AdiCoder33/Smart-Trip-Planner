@@ -31,6 +31,8 @@ Receive payload:
     "trip_id":"...",
     "sender":{"id":"...","name":"..."},
     "content":"...",
+    "encrypted_content":"...",
+    "encryption_version":1,
     "client_id":"...",
     "created_at":"ISO8601"
   }
@@ -46,6 +48,34 @@ REST send (also broadcasts to WebSocket group):
 ```
 POST /api/trips/<trip_id>/chat/messages
 { "content": "Hello", "client_id": "<uuid>" }
+```
+
+Chat key (used for encrypted payloads):
+```
+GET /api/trips/<trip_id>/chat/key
+```
+
+## Expenses
+Create/list expenses:
+```
+GET /api/trips/<trip_id>/expenses
+POST /api/trips/<trip_id>/expenses
+```
+
+Summary per member:
+```
+GET /api/trips/<trip_id>/expenses/summary
+```
+
+## Calendar export
+Export itinerary as ICS:
+```
+GET /api/trips/<trip_id>/calendar
+```
+
+For mobile download, append a token:
+```
+GET /api/trips/<trip_id>/calendar?token=<JWT_ACCESS>
 ```
 
 ## Email invites

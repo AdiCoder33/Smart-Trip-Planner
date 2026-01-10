@@ -1,6 +1,17 @@
 from rest_framework import serializers
 
-from .models import ChatMessage, ItineraryItem, Poll, PollOption, Trip, TripInvite, TripMember, TripRole
+from .models import (
+    ChatMessage,
+    Expense,
+    ExpenseSplit,
+    ItineraryItem,
+    Poll,
+    PollOption,
+    Trip,
+    TripInvite,
+    TripMember,
+    TripRole,
+)
 
 
 class TripSerializer(serializers.ModelSerializer):
@@ -101,10 +112,64 @@ class ChatMessageSerializer(serializers.ModelSerializer):
             "trip_id",
             "sender",
             "content",
+            "encrypted_content",
+            "encryption_version",
             "client_id",
             "created_at",
         )
         read_only_fields = fields
+
+
+class ExpenseSplitSerializer(serializers.ModelSerializer):
+    user = MemberUserSerializer(read_only=True)
+
+    class Meta:
+        model = ExpenseSplit
+        fields = ("id", "user", "amount")
+        read_only_fields = fields
+
+
+class ExpenseSerializer(serializers.ModelSerializer):
+    trip_id = serializers.UUIDField(read_only=True)
+    paid_by = MemberUserSerializer(read_only=True)
+    created_by = MemberUserSerializer(read_only=True)
+    splits = ExpenseSplitSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Expense
+        fields = (
+            "id",
+            "trip_id",
+            "title",
+            "amount",
+            "currency",
+            "paid_by",
+            "created_by",
+            "splits",
+            "created_at",
+        )
+        read_only_fields = fields
+
+
+class ExpenseSplitInputSerializer(serializers.Serializer):
+    user_id = serializers.UUIDField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+
+
+class ExpenseCreateSerializer(serializers.Serializer):
+    title = serializers.CharField()
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2)
+    currency = serializers.CharField(max_length=3, required=False)
+    paid_by = serializers.UUIDField(required=False)
+    participant_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    splits = ExpenseSplitInputSerializer(many=True, required=False)
+
+
+class ExpenseSummarySerializer(serializers.Serializer):
+    user = MemberUserSerializer()
+    paid = serializers.DecimalField(max_digits=10, decimal_places=2)
+    owed = serializers.DecimalField(max_digits=10, decimal_places=2)
+    net = serializers.DecimalField(max_digits=10, decimal_places=2)
 
 
 class PollOptionSerializer(serializers.ModelSerializer):

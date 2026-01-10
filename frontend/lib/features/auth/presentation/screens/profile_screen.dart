@@ -108,7 +108,7 @@ class ProfileScreen extends StatelessWidget {
     if (parts.isEmpty) {
       return null;
     }
-    return parts.join(' • ');
+    return parts.join(' - ');
   }
 
   String _formatDate(DateTime date) {

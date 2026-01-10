@@ -1,14 +1,16 @@
 import hashlib
 import logging
 import secrets
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone as dt_timezone
+from decimal import Decimal, ROUND_HALF_UP
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.conf import settings
 from django.core.mail import send_mail
+from django.http import HttpResponse
 from django.db import transaction
-from django.db.models import Count, Max, Prefetch
+from django.db.models import Count, Max, Prefetch, Sum
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
@@ -16,14 +18,19 @@ from rest_framework import permissions, status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework_simplejwt.tokens import AccessToken
 
 from .models import (
     ChatMessage,
+    Expense,
+    ExpenseSplit,
     InviteStatus,
     ItineraryItem,
     Poll,
     PollOption,
     Trip,
+    TripChatKey,
     TripInvite,
     TripMember,
     TripRole,
@@ -33,6 +40,9 @@ from .models import (
 from .permissions import get_trip_member, is_editor_or_owner, is_owner, TripPermission
 from .serializers import (
     ChatMessageSerializer,
+    ExpenseCreateSerializer,
+    ExpenseSerializer,
+    ExpenseSummarySerializer,
     InviteAcceptSerializer,
     InviteRevokeSerializer,
     ItineraryItemSerializer,
@@ -89,6 +99,33 @@ def _require_member(request, trip):
     return member
 
 
+def _require_member_for_user(user, trip):
+    member = TripMember.objects.filter(
+        trip=trip,
+        user=user,
+        status=TripStatus.ACTIVE,
+    ).first()
+    if member is None:
+        raise PermissionDenied("Not a trip member.")
+    return member
+
+
+def _get_user_from_token(token):
+    if not token:
+        return None
+    try:
+        access = AccessToken(token)
+    except TokenError:
+        return None
+    user_id = access.get("user_id")
+    if not user_id:
+        return None
+    from django.contrib.auth import get_user_model
+
+    User = get_user_model()
+    return User.objects.filter(id=user_id, is_active=True).first()
+
+
 class TripMembersView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -102,6 +139,20 @@ class TripMembersView(APIView):
         )
         serializer = TripMemberSerializer(members, many=True)
         return Response(serializer.data)
+
+
+class TripChatKeyView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, trip_id):
+        trip = _get_trip_or_404(trip_id)
+        _require_member(request, trip)
+
+        chat_key, _ = TripChatKey.objects.get_or_create(
+            trip=trip,
+            defaults={"key": secrets.token_urlsafe(32), "version": 1},
+        )
+        return Response({"key": chat_key.key, "version": chat_key.version})
 
 
 class TripChatMessagesView(APIView):
@@ -145,8 +196,21 @@ class TripChatMessagesView(APIView):
             raise PermissionDenied("Not a trip member.")
 
         content = (request.data.get("content") or "").strip()
-        if not content:
-            raise ValidationError("content is required.")
+        encrypted_content = (request.data.get("encrypted_content") or "").strip()
+        if not content and not encrypted_content:
+            raise ValidationError("content or encrypted_content is required.")
+
+        encryption_version = request.data.get("encryption_version")
+        if encrypted_content:
+            if encryption_version is None:
+                encryption_version = 1
+            else:
+                try:
+                    encryption_version = int(encryption_version)
+                except (TypeError, ValueError):
+                    raise ValidationError("encryption_version must be an integer.")
+        else:
+            encryption_version = None
 
         client_id = request.data.get("client_id")
         if client_id:
@@ -161,7 +225,9 @@ class TripChatMessagesView(APIView):
         message = ChatMessage.objects.create(
             trip=trip,
             sender=request.user,
-            content=content,
+            content=content or "",
+            encrypted_content=encrypted_content or None,
+            encryption_version=encryption_version,
             client_id=client_id,
         )
         message = ChatMessage.objects.select_related("sender").get(id=message.id)
@@ -178,6 +244,211 @@ class TripChatMessagesView(APIView):
                 logger.exception("chat broadcast failed", extra={"trip_id": str(trip_id)})
 
         return Response(payload, status=status.HTTP_201_CREATED)
+
+
+class TripCalendarExportView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, trip_id):
+        user = request.user if request.user.is_authenticated else None
+        if user is None:
+            token = request.query_params.get("token")
+            user_from_token = _get_user_from_token(token)
+            if not user_from_token:
+                raise PermissionDenied("Authentication required.")
+            user = user_from_token
+
+        trip = _get_trip_or_404(trip_id)
+        _require_member_for_user(user, trip)
+
+        items = (
+            ItineraryItem.objects.filter(trip=trip)
+            .order_by("date", "start_time", "sort_order")
+            .all()
+        )
+        now = timezone.now()
+        lines = [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "PRODID:-//Smart Trip Planner//EN",
+            "CALSCALE:GREGORIAN",
+        ]
+
+        for item in items:
+            if item.date is None:
+                continue
+            uid = f"{item.id}@smart-trip-planner"
+            lines.append("BEGIN:VEVENT")
+            lines.append(f"UID:{uid}")
+            lines.append(f"DTSTAMP:{now.strftime('%Y%m%dT%H%M%SZ')}")
+            if item.start_time or item.end_time:
+                start_time = item.start_time or item.end_time
+                end_time = item.end_time or item.start_time
+                start_dt = timezone.make_aware(
+                    datetime.combine(item.date, start_time),
+                    timezone=timezone.get_current_timezone(),
+                )
+                end_dt = timezone.make_aware(
+                    datetime.combine(item.date, end_time),
+                    timezone=timezone.get_current_timezone(),
+                )
+                lines.append(f"DTSTART:{start_dt.astimezone(dt_timezone.utc).strftime('%Y%m%dT%H%M%SZ')}")
+                lines.append(f"DTEND:{end_dt.astimezone(dt_timezone.utc).strftime('%Y%m%dT%H%M%SZ')}")
+            else:
+                lines.append(f"DTSTART;VALUE=DATE:{item.date.strftime('%Y%m%d')}")
+
+            summary = item.title.replace("\n", " ").strip()
+            lines.append(f"SUMMARY:{summary}")
+            if item.location:
+                lines.append(f"LOCATION:{item.location.replace('\n', ' ').replace('\r', ' ').strip()}")
+            if item.notes:
+                lines.append(f"DESCRIPTION:{item.notes.replace('\n', ' ').replace('\r', ' ').strip()}")
+            lines.append("END:VEVENT")
+
+        lines.append("END:VCALENDAR")
+        content = "\r\n".join(lines)
+        response = HttpResponse(content, content_type="text/calendar; charset=utf-8")
+        response["Content-Disposition"] = f'attachment; filename="trip-{trip_id}.ics"'
+        return response
+
+
+class TripExpensesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, trip_id):
+        trip = _get_trip_or_404(trip_id)
+        _require_member(request, trip)
+        expenses = (
+            Expense.objects.filter(trip=trip)
+            .select_related("paid_by", "created_by")
+            .prefetch_related("splits__user")
+            .order_by("-created_at")
+        )
+        return Response(ExpenseSerializer(expenses, many=True).data)
+
+    def post(self, request, trip_id):
+        trip = _get_trip_or_404(trip_id)
+        member = _require_member(request, trip)
+        if not is_editor_or_owner(member):
+            raise PermissionDenied("Insufficient permissions.")
+
+        serializer = ExpenseCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        amount = data["amount"]
+        currency = data.get("currency") or "USD"
+        paid_by_id = data.get("paid_by") or request.user.id
+
+        participant_ids = data.get("participant_ids")
+        splits_data = data.get("splits")
+
+        if splits_data:
+            participant_ids = [split["user_id"] for split in splits_data]
+
+        members = TripMember.objects.filter(
+            trip=trip,
+            status=TripStatus.ACTIVE,
+        ).select_related("user")
+
+        member_ids = {member.user_id for member in members}
+        if participant_ids:
+            missing = [pid for pid in participant_ids if pid not in member_ids]
+            if missing:
+                raise ValidationError("Participants must be trip members.")
+        else:
+            participant_ids = list(member_ids)
+
+        if paid_by_id not in member_ids:
+            raise ValidationError("paid_by must be a trip member.")
+
+        with transaction.atomic():
+            expense = Expense.objects.create(
+                trip=trip,
+                title=data["title"],
+                amount=amount,
+                currency=currency,
+                paid_by_id=paid_by_id,
+                created_by=request.user,
+            )
+
+            if splits_data:
+                total_split = sum((split["amount"] for split in splits_data), Decimal("0"))
+                if total_split != amount:
+                    raise ValidationError("Split amounts must equal total amount.")
+                splits = [
+                    ExpenseSplit(expense=expense, user_id=split["user_id"], amount=split["amount"])
+                    for split in splits_data
+                ]
+            else:
+                count = len(participant_ids)
+                if count == 0:
+                    raise ValidationError("Participants required.")
+                quant = Decimal("0.01")
+                share = (amount / count).quantize(quant, rounding=ROUND_HALF_UP)
+                splits = []
+                for idx, user_id in enumerate(participant_ids):
+                    split_amount = share
+                    if idx == count - 1:
+                        split_amount = amount - share * (count - 1)
+                    splits.append(ExpenseSplit(expense=expense, user_id=user_id, amount=split_amount))
+
+            ExpenseSplit.objects.bulk_create(splits)
+
+        expense = (
+            Expense.objects.filter(id=expense.id)
+            .select_related("paid_by", "created_by")
+            .prefetch_related("splits__user")
+            .get()
+        )
+        return Response(ExpenseSerializer(expense).data, status=status.HTTP_201_CREATED)
+
+
+class TripExpenseSummaryView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, trip_id):
+        trip = _get_trip_or_404(trip_id)
+        _require_member(request, trip)
+
+        members = (
+            TripMember.objects.filter(trip=trip, status=TripStatus.ACTIVE)
+            .select_related("user")
+            .order_by("created_at")
+        )
+        paid_map = {
+            row["paid_by_id"]: row["total"]
+            for row in Expense.objects.filter(trip=trip)
+            .values("paid_by_id")
+            .annotate(total=Sum("amount"))
+        }
+        owed_map = {
+            row["user_id"]: row["total"]
+            for row in ExpenseSplit.objects.filter(expense__trip=trip)
+            .values("user_id")
+            .annotate(total=Sum("amount"))
+        }
+
+        summary = []
+        for member in members:
+            paid = paid_map.get(member.user_id, Decimal("0.00"))
+            owed = owed_map.get(member.user_id, Decimal("0.00"))
+            net = paid - owed
+            summary.append(
+                {
+                    "user": {
+                        "id": member.user_id,
+                        "email": member.user.email,
+                        "name": member.user.name or "",
+                    },
+                    "paid": paid,
+                    "owed": owed,
+                    "net": net,
+                }
+            )
+
+        serializer = ExpenseSummarySerializer(summary, many=True)
+        return Response(serializer.data)
 
 
 class TripItineraryView(APIView):

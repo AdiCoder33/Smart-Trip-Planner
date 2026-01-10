@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
+import '../../../../core/config.dart';
 import '../../../../core/connectivity/connectivity_cubit.dart';
 import '../../../../core/widgets/offline_banner.dart';
 import '../../../../core/widgets/skeleton_loader.dart';
+import '../../../../core/storage/token_storage.dart';
+import '../../../auth/data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/itinerary_item.dart';
 import '../../domain/entities/trip.dart';
 import '../bloc/itinerary_bloc.dart';
@@ -45,6 +49,10 @@ class ItineraryTab extends StatelessWidget {
                         ItineraryRefreshed(tripId: trip.id),
                       ),
                   icon: const Icon(Icons.refresh),
+                ),
+                IconButton(
+                  onPressed: () => _exportCalendar(context),
+                  icon: const Icon(Icons.calendar_month_outlined),
                 ),
                 FilledButton.icon(
                   onPressed: () => _showFormSheet(context),
@@ -187,6 +195,41 @@ class ItineraryTab extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Pending sync. Try again after reconnection.')),
     );
+  }
+
+  Future<void> _exportCalendar(BuildContext context) async {
+    final authRepository = context.read<AuthRepositoryImpl>();
+    final tokenStorage = context.read<TokenStorage>();
+    try {
+      await authRepository.getMe();
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session expired. Please log in again.')),
+        );
+      }
+      return;
+    }
+    final token = await tokenStorage.getAccessToken();
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Missing access token. Please log in again.')),
+      );
+      return;
+    }
+
+    final base = Uri.parse(ApiConfig.baseUrl);
+    final uri = base.replace(
+      path: '/api/trips/${trip.id}/calendar',
+      queryParameters: {'token': token},
+    );
+
+    final launched = await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!launched && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not open calendar export.')),
+      );
+    }
   }
 }
 

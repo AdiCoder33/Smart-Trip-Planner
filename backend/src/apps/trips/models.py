@@ -57,6 +57,16 @@ class TripMember(models.Model):
         return f"{self.user_id} -> {self.trip_id} ({self.role})"
 
 
+class TripChatKey(models.Model):
+    trip = models.OneToOneField(Trip, on_delete=models.CASCADE, related_name="chat_key")
+    key = models.CharField(max_length=255)
+    version = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self) -> str:
+        return f"{self.trip_id} v{self.version}"
+
+
 class ChatMessage(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="chat_messages")
@@ -65,7 +75,9 @@ class ChatMessage(models.Model):
         on_delete=models.CASCADE,
         related_name="sent_chat_messages",
     )
-    content = models.TextField()
+    content = models.TextField(blank=True)
+    encrypted_content = models.TextField(null=True, blank=True)
+    encryption_version = models.PositiveIntegerField(null=True, blank=True)
     client_id = models.CharField(max_length=64, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -84,6 +96,58 @@ class ChatMessage(models.Model):
 
     def __str__(self) -> str:
         return f"{self.trip_id} - {self.sender_id}"
+
+
+class Expense(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="expenses")
+    title = models.CharField(max_length=255)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    currency = models.CharField(max_length=3, default="USD")
+    paid_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="expenses_paid",
+    )
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="expenses_created",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["trip", "created_at"], name="trips_expense_trip_created_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.trip_id} - {self.title}"
+
+
+class ExpenseSplit(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    expense = models.ForeignKey(Expense, on_delete=models.CASCADE, related_name="splits")
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="expense_splits",
+    )
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["expense", "user"], name="unique_expense_split"),
+        ]
+        indexes = [
+            models.Index(fields=["user"], name="trips_expense_split_user_idx"),
+            models.Index(fields=["expense"], name="trips_exp_split_exp_idx"),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.expense_id} - {self.user_id}"
 
 
 class ItineraryItem(models.Model):

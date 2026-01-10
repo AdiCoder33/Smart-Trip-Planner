@@ -75,8 +75,8 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
-  void sendMessageSocket({required String content, required String clientId}) {
-    remoteDataSource.sendMessageSocket(content: content, clientId: clientId);
+  Future<void> sendMessageSocket({required String content, required String clientId}) {
+    return remoteDataSource.sendMessageSocket(content: content, clientId: clientId);
   }
 
   @override

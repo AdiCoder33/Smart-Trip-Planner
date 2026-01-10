@@ -6,7 +6,9 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/config.dart';
 import 'core/connectivity/connectivity_cubit.dart';
 import 'core/connectivity/connectivity_service.dart';
+import 'core/crypto/chat_crypto.dart';
 import 'core/network/dio_client.dart';
+import 'core/storage/chat_key_storage.dart';
 import 'core/storage/token_storage.dart';
 import 'core/sync/pending_action.dart';
 import 'core/sync/sync_queue.dart';
@@ -22,6 +24,8 @@ import 'features/auth/presentation/screens/login_screen.dart';
 import 'features/trips/data/datasources/chat_local_data_source.dart';
 import 'features/trips/data/datasources/chat_remote_data_source.dart';
 import 'features/trips/data/datasources/collaborators_remote_data_source.dart';
+import 'features/trips/data/datasources/expenses_local_data_source.dart';
+import 'features/trips/data/datasources/expenses_remote_data_source.dart';
 import 'features/trips/data/datasources/itinerary_local_data_source.dart';
 import 'features/trips/data/datasources/itinerary_remote_data_source.dart';
 import 'features/trips/data/datasources/polls_local_data_source.dart';
@@ -29,12 +33,15 @@ import 'features/trips/data/datasources/polls_remote_data_source.dart';
 import 'features/trips/data/datasources/trips_local_data_source.dart';
 import 'features/trips/data/datasources/trips_remote_data_source.dart';
 import 'features/trips/data/models/chat_message_model.dart';
+import 'features/trips/data/models/expense_model.dart';
+import 'features/trips/data/models/expense_split_model.dart';
 import 'features/trips/data/models/itinerary_item_model.dart';
 import 'features/trips/data/models/poll_model.dart';
 import 'features/trips/data/models/poll_option_model.dart';
 import 'features/trips/data/models/trip_model.dart';
 import 'features/trips/data/repositories/chat_repository_impl.dart';
 import 'features/trips/data/repositories/collaborators_repository_impl.dart';
+import 'features/trips/data/repositories/expenses_repository_impl.dart';
 import 'features/trips/data/repositories/itinerary_repository_impl.dart';
 import 'features/trips/data/repositories/polls_repository_impl.dart';
 import 'features/trips/data/repositories/trips_repository_impl.dart';
@@ -53,15 +60,20 @@ Future<void> main() async {
   Hive.registerAdapter(PollModelAdapter());
   Hive.registerAdapter(PendingActionAdapter());
   Hive.registerAdapter(ChatMessageModelAdapter());
+  Hive.registerAdapter(ExpenseSplitModelAdapter());
+  Hive.registerAdapter(ExpenseModelAdapter());
   await Hive.openBox<TripModel>('trips');
   await Hive.openBox<ItineraryItemModel>('itinerary_items');
   await Hive.openBox<PollModel>('polls');
   await Hive.openBox<PendingAction>('sync_queue');
   await Hive.openBox<ChatMessageModel>('chat_messages');
+  await Hive.openBox<ExpenseModel>('expenses');
 
   const secureStorage = FlutterSecureStorage();
   final connectivityService = ConnectivityService();
   final tokenStorage = TokenStorage(secureStorage);
+  final chatKeyStorage = ChatKeyStorage(secureStorage);
+  final chatCrypto = ChatCrypto();
   final dioClient = DioClient(baseUrl: ApiConfig.baseUrl, tokenStorage: tokenStorage);
 
   final authRemote = AuthRemoteDataSource(dioClient.dio);
@@ -94,8 +106,15 @@ Future<void> main() async {
   final collaboratorsRemote = CollaboratorsRemoteDataSource(dioClient.dio);
   final collaboratorsRepository = CollaboratorsRepositoryImpl(remoteDataSource: collaboratorsRemote);
 
+  final expensesLocal = ExpensesLocalDataSource(Hive.box<ExpenseModel>('expenses'));
+  final expensesRemote = ExpensesRemoteDataSource(dioClient.dio);
+  final expensesRepository = ExpensesRepositoryImpl(
+    remoteDataSource: expensesRemote,
+    localDataSource: expensesLocal,
+  );
+
   final chatLocal = ChatLocalDataSource(Hive.box<ChatMessageModel>('chat_messages'));
-  final chatRemote = ChatRemoteDataSource(dioClient.dio, tokenStorage);
+  final chatRemote = ChatRemoteDataSource(dioClient.dio, tokenStorage, chatKeyStorage, chatCrypto);
   final chatRepository = ChatRepositoryImpl(
     remoteDataSource: chatRemote,
     localDataSource: chatLocal,
@@ -111,11 +130,13 @@ Future<void> main() async {
   );
 
   runApp(SmartTripPlannerApp(
+    tokenStorage: tokenStorage,
     authRepository: authRepository,
     tripsRepository: tripsRepository,
     itineraryRepository: itineraryRepository,
     pollsRepository: pollsRepository,
     collaboratorsRepository: collaboratorsRepository,
+    expensesRepository: expensesRepository,
     chatRepository: chatRepository,
     connectivityService: connectivityService,
     syncQueue: syncQueue,
@@ -124,11 +145,13 @@ Future<void> main() async {
 }
 
 class SmartTripPlannerApp extends StatelessWidget {
+  final TokenStorage tokenStorage;
   final AuthRepositoryImpl authRepository;
   final TripsRepositoryImpl tripsRepository;
   final ItineraryRepositoryImpl itineraryRepository;
   final PollsRepositoryImpl pollsRepository;
   final CollaboratorsRepositoryImpl collaboratorsRepository;
+  final ExpensesRepositoryImpl expensesRepository;
   final ChatRepositoryImpl chatRepository;
   final ConnectivityService connectivityService;
   final SyncQueue syncQueue;
@@ -136,11 +159,13 @@ class SmartTripPlannerApp extends StatelessWidget {
 
   const SmartTripPlannerApp({
     super.key,
+    required this.tokenStorage,
     required this.authRepository,
     required this.tripsRepository,
     required this.itineraryRepository,
     required this.pollsRepository,
     required this.collaboratorsRepository,
+    required this.expensesRepository,
     required this.chatRepository,
     required this.connectivityService,
     required this.syncQueue,
@@ -152,10 +177,12 @@ class SmartTripPlannerApp extends StatelessWidget {
     return MultiRepositoryProvider(
       providers: [
         RepositoryProvider.value(value: authRepository),
+        RepositoryProvider.value(value: tokenStorage),
         RepositoryProvider.value(value: tripsRepository),
         RepositoryProvider.value(value: itineraryRepository),
         RepositoryProvider.value(value: pollsRepository),
         RepositoryProvider.value(value: collaboratorsRepository),
+        RepositoryProvider.value(value: expensesRepository),
         RepositoryProvider.value(value: chatRepository),
         RepositoryProvider.value(value: connectivityService),
         RepositoryProvider.value(value: syncQueue),

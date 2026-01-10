@@ -163,7 +163,7 @@ class _ConnectionStatusChip extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      color: color.withValues(alpha: 0.1),
+      color: color.withOpacity(0.1),
       child: Text(
         label,
         style: TextStyle(color: color, fontWeight: FontWeight.w600),
@@ -182,7 +182,7 @@ class _MessageBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final alignment = isMine ? CrossAxisAlignment.end : CrossAxisAlignment.start;
     final bubbleColor = isMine ? Colors.teal.shade100 : Colors.grey.shade200;
-    final time = TimeOfDay.fromDateTime(message.createdAt).format(context);
+    final time = TimeOfDay.fromDateTime(message.createdAt.toLocal()).format(context);
 
     return Column(
       crossAxisAlignment: alignment,

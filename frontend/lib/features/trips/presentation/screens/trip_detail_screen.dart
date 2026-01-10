@@ -6,19 +6,25 @@ import '../../../../core/sync/sync_queue.dart';
 import '../../../../core/sync/sync_service.dart';
 import '../../data/repositories/collaborators_repository_impl.dart';
 import '../../data/repositories/chat_repository_impl.dart';
+import '../../data/repositories/expenses_repository_impl.dart';
 import '../../data/repositories/itinerary_repository_impl.dart';
 import '../../data/repositories/polls_repository_impl.dart';
 import '../../domain/entities/trip.dart';
+import '../../domain/usecases/cache_expenses.dart';
 import '../../domain/usecases/cache_chat_messages.dart';
 import '../../domain/usecases/cache_itinerary_items.dart';
 import '../../domain/usecases/cache_polls.dart';
+import '../../domain/usecases/create_expense.dart';
 import '../../domain/usecases/get_cached_chat_messages.dart';
+import '../../domain/usecases/get_cached_expenses.dart';
 import '../../domain/usecases/create_itinerary_item.dart';
 import '../../domain/usecases/create_poll.dart';
 import '../../domain/usecases/get_chat_messages.dart';
+import '../../domain/usecases/get_expense_summary.dart';
 import '../../domain/usecases/delete_itinerary_item.dart';
 import '../../domain/usecases/delete_local_itinerary_item.dart';
 import '../../domain/usecases/delete_local_poll.dart';
+import '../../domain/usecases/get_expenses.dart';
 import '../../domain/usecases/send_chat_message.dart';
 import '../../domain/usecases/get_cached_itinerary_items.dart';
 import '../../domain/usecases/get_cached_polls.dart';
@@ -36,10 +42,12 @@ import '../../domain/usecases/upsert_local_poll.dart';
 import '../../domain/usecases/vote_poll.dart';
 import '../bloc/chat_bloc.dart';
 import '../bloc/collaborators_bloc.dart';
+import '../bloc/expenses_bloc.dart';
 import '../bloc/itinerary_bloc.dart';
 import '../bloc/polls_bloc.dart';
 import 'chat_tab.dart';
 import 'collaborators_tab.dart';
+import 'expenses_tab.dart';
 import 'itinerary_tab.dart';
 import 'polls_tab.dart';
 
@@ -54,6 +62,7 @@ class TripDetailScreen extends StatelessWidget {
     final pollsRepository = context.read<PollsRepositoryImpl>();
     final collaboratorsRepository = context.read<CollaboratorsRepositoryImpl>();
     final chatRepository = context.read<ChatRepositoryImpl>();
+    final expensesRepository = context.read<ExpensesRepositoryImpl>();
     final connectivityService = context.read<ConnectivityService>();
     final syncQueue = context.read<SyncQueue>();
     final syncService = context.read<SyncService>();
@@ -111,15 +120,26 @@ class TripDetailScreen extends StatelessWidget {
             syncQueue: syncQueue,
           )..add(ChatStarted(tripId: trip.id)),
         ),
+        BlocProvider(
+          create: (_) => ExpensesBloc(
+            getExpenses: GetExpenses(expensesRepository),
+            getCachedExpenses: GetCachedExpenses(expensesRepository),
+            createExpense: CreateExpense(expensesRepository),
+            getExpenseSummary: GetExpenseSummary(expensesRepository),
+            cacheExpenses: CacheExpenses(expensesRepository),
+            connectivityService: connectivityService,
+          )..add(ExpensesStarted(tripId: trip.id)),
+        ),
       ],
       child: DefaultTabController(
-        length: 4,
+        length: 5,
         child: Scaffold(
           appBar: AppBar(
             title: Text(trip.title),
             bottom: const TabBar(
               tabs: [
                 Tab(icon: Icon(Icons.route_outlined), text: 'Itinerary'),
+                Tab(icon: Icon(Icons.payments_outlined), text: 'Expenses'),
                 Tab(icon: Icon(Icons.how_to_vote_outlined), text: 'Polls'),
                 Tab(icon: Icon(Icons.group_outlined), text: 'Collaborators'),
                 Tab(icon: Icon(Icons.forum_outlined), text: 'Chat'),
@@ -129,6 +149,7 @@ class TripDetailScreen extends StatelessWidget {
           body: TabBarView(
             children: [
               ItineraryTab(trip: trip),
+              ExpensesTab(trip: trip),
               PollsTab(trip: trip),
               CollaboratorsTab(trip: trip),
               ChatTab(trip: trip),

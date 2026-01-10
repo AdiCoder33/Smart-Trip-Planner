@@ -2,11 +2,15 @@ from django.urls import path
 from rest_framework.routers import DefaultRouter
 
 from .views import (
+    TripChatKeyView,
     InviteAcceptView,
     InviteRevokeView,
     ItineraryItemDetailView,
     PollDetailView,
     PollVoteView,
+    TripCalendarExportView,
+    TripExpensesView,
+    TripExpenseSummaryView,
     TripInvitesView,
     TripItineraryReorderView,
     TripItineraryView,
@@ -32,6 +36,14 @@ urlpatterns = [
         "trips/<uuid:trip_id>/chat/messages",
         TripChatMessagesView.as_view(),
         name="trip-chat-messages",
+    ),
+    path("trips/<uuid:trip_id>/chat/key", TripChatKeyView.as_view(), name="trip-chat-key"),
+    path("trips/<uuid:trip_id>/calendar", TripCalendarExportView.as_view(), name="trip-calendar-export"),
+    path("trips/<uuid:trip_id>/expenses", TripExpensesView.as_view(), name="trip-expenses"),
+    path(
+        "trips/<uuid:trip_id>/expenses/summary",
+        TripExpenseSummaryView.as_view(),
+        name="trip-expenses-summary",
     ),
     path("invites/accept", InviteAcceptView.as_view(), name="invite-accept"),
     path("invites/revoke", InviteRevokeView.as_view(), name="invite-revoke"),

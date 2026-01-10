@@ -15,6 +15,12 @@ For iOS simulator use `http://localhost:8000`.
 - Pending items show a small "Pending" label until synced.
 - Chat messages are cached locally and queued when offline.
 
+## Expenses
+- Add expenses and view a per-user summary (paid, owed, net).
+
+## Calendar export
+- Export itinerary as an ICS file from the itinerary tab.
+
 ## Invites
 - Invite tokens are delivered via email (console backend in dev).
 - Use the "Accept invite token" button in the Collaborators tab to paste a token.
@@ -22,6 +28,7 @@ For iOS simulator use `http://localhost:8000`.
 ## Chat
 - WebSocket URL is derived from `API_BASE_URL` (http -> ws, https -> wss).
 - Messages sent offline are queued and replayed on reconnect.
+- Messages are encrypted using a per-trip key fetched from `/api/trips/<trip_id>/chat/key`.
 
 ## Tests
 ```bash

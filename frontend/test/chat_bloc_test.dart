@@ -145,7 +145,7 @@ void main() {
       when(() => upsertLocalChatMessage.call(any())).thenAnswer((_) async {});
       when(() => cacheChatMessages.call(any(), any())).thenAnswer((_) async {});
       when(() => chatRepository.sendMessageSocket(content: any(named: 'content'), clientId: any(named: 'clientId')))
-          .thenReturn(null);
+          .thenAnswer((_) async {});
       return buildBloc();
     },
     seed: () => const ChatState(

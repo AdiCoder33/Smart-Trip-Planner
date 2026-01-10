@@ -130,7 +130,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     }
 
     try {
-      chatRepository.sendMessageSocket(content: event.content, clientId: clientId);
+      await chatRepository.sendMessageSocket(content: event.content, clientId: clientId);
     } catch (_) {
       await syncQueue.enqueue(
         PendingAction.create(

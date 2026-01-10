@@ -2,10 +2,12 @@
 
 ## Features
 - Itinerary management with drag-and-drop reorder
+- Expense splitting with per-member summaries
 - Polls with voting + per-user vote tracking
 - Collaborator invites via email + token acceptance
 - Offline-first caching with a sync queue for itinerary and polls
-- Real-time trip chat with WebSockets
+- Real-time trip chat with WebSockets + encrypted payloads
+- Calendar export (ICS)
 - Render deployment readiness + GitHub Actions CI
 
 ## Run locally
