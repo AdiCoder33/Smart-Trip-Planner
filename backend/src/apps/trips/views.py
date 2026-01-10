@@ -1,4 +1,5 @@
 import hashlib
+import logging
 import secrets
 from datetime import timedelta
 
@@ -44,6 +45,8 @@ from .serializers import (
     TripMemberSerializer,
     TripSerializer,
 )
+
+logger = logging.getLogger("chat")
 
 
 class TripViewSet(viewsets.ModelViewSet):
@@ -166,10 +169,13 @@ class TripChatMessagesView(APIView):
         payload = ChatMessageSerializer(message).data
         channel_layer = get_channel_layer()
         if channel_layer is not None:
-            async_to_sync(channel_layer.group_send)(
-                f"trip_{trip_id}",
-                {"type": "chat.message", "message": payload},
-            )
+            try:
+                async_to_sync(channel_layer.group_send)(
+                    f"trip_{trip_id}",
+                    {"type": "chat.message", "message": payload},
+                )
+            except Exception:  # pragma: no cover - best-effort broadcast
+                logger.exception("chat broadcast failed", extra={"trip_id": str(trip_id)})
 
         return Response(payload, status=status.HTTP_201_CREATED)
 

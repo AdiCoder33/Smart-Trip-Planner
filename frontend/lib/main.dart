@@ -11,6 +11,7 @@ import 'core/storage/token_storage.dart';
 import 'core/sync/pending_action.dart';
 import 'core/sync/sync_queue.dart';
 import 'core/sync/sync_service.dart';
+import 'core/theme/app_theme.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/usecases/get_me.dart';
@@ -184,10 +185,8 @@ class SmartTripPlannerApp extends StatelessWidget {
         ],
         child: MaterialApp(
           title: 'Smart Trip Planner',
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-            useMaterial3: true,
-          ),
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.light(),
           home: const AuthGate(),
         ),
       ),

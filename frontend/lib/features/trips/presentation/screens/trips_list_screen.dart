@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/connectivity/connectivity_cubit.dart';
 import '../../../../core/widgets/offline_banner.dart';
 import '../../../../core/widgets/skeleton_loader.dart';
+import '../../../auth/presentation/screens/profile_screen.dart';
 import '../../domain/entities/trip.dart';
 import '../bloc/trips_bloc.dart';
 import 'package:smart_trip_planner/features/trips/presentation/widgets/trip_card.dart';
@@ -36,8 +37,22 @@ class _TripsListScreenState extends State<TripsListScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('My Trips'),
+          title: Row(
+            children: const [
+              Icon(Icons.travel_explore, size: 22),
+              SizedBox(width: 8),
+              Text('My Trips'),
+            ],
+          ),
           actions: [
+            IconButton(
+              onPressed: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                );
+              },
+              icon: const Icon(Icons.person_outline),
+            ),
             IconButton(
               onPressed: () => context.read<TripsBloc>().add(const TripsRefreshed()),
               icon: const Icon(Icons.refresh),
@@ -71,6 +86,7 @@ class _TripsListScreenState extends State<TripsListScreen> {
                 return OfflineBanner(isOnline: connectivityState.isOnline);
               },
             ),
+            const _TripsHeader(),
             Expanded(
               child: BlocBuilder<TripsBloc, TripsState>(
                 builder: (context, state) {
@@ -115,6 +131,60 @@ class _TripsListScreenState extends State<TripsListScreen> {
   void _openDetail(BuildContext context, TripEntity trip) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => TripDetailScreen(trip: trip)),
+    );
+  }
+}
+
+class _TripsHeader extends StatelessWidget {
+  const _TripsHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<TripsBloc, TripsState>(
+      builder: (context, state) {
+        return Container(
+          margin: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0B6E4F), Color(0xFF1B8A6E)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(18),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.map_outlined, color: Colors.white, size: 28),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Plan your next escape',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '${state.trips.length} trips in your travel board',
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.18),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.add_road, color: Colors.white),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

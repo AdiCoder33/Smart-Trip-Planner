@@ -91,8 +91,8 @@ class ChatSenderSerializer(serializers.Serializer):
 
 
 class ChatMessageSerializer(serializers.ModelSerializer):
-    trip_id = serializers.UUIDField(source="trip_id", read_only=True)
-    sender = ChatSenderSerializer(source="sender", read_only=True)
+    trip_id = serializers.UUIDField(read_only=True)
+    sender = ChatSenderSerializer(read_only=True)
 
     class Meta:
         model = ChatMessage

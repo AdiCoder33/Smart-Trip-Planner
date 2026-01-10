@@ -119,10 +119,10 @@ class TripDetailScreen extends StatelessWidget {
             title: Text(trip.title),
             bottom: const TabBar(
               tabs: [
-                Tab(text: 'Itinerary'),
-                Tab(text: 'Polls'),
-                Tab(text: 'Collaborators'),
-                Tab(text: 'Chat'),
+                Tab(icon: Icon(Icons.route_outlined), text: 'Itinerary'),
+                Tab(icon: Icon(Icons.how_to_vote_outlined), text: 'Polls'),
+                Tab(icon: Icon(Icons.group_outlined), text: 'Collaborators'),
+                Tab(icon: Icon(Icons.forum_outlined), text: 'Chat'),
               ],
             ),
           ),

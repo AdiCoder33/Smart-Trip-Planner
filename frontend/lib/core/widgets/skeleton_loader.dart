@@ -7,6 +7,7 @@ class SkeletonLoader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final baseColor = Theme.of(context).colorScheme.surfaceVariant;
     return ListView.separated(
       padding: const EdgeInsets.all(16),
       itemCount: itemCount,
@@ -15,7 +16,7 @@ class SkeletonLoader extends StatelessWidget {
         return Container(
           height: 72,
           decoration: BoxDecoration(
-            color: Colors.grey.shade300,
+            color: baseColor,
             borderRadius: BorderRadius.circular(12),
           ),
         );
