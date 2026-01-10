@@ -2,11 +2,14 @@ import hashlib
 import secrets
 from datetime import timedelta
 
+from asgiref.sync import async_to_sync
+from channels.layers import get_channel_layer
 from django.conf import settings
 from django.core.mail import send_mail
 from django.db import transaction
 from django.db.models import Count, Max, Prefetch
 from django.shortcuts import get_object_or_404
+from django.utils.dateparse import parse_datetime
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -14,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from .models import (
+    ChatMessage,
     InviteStatus,
     ItineraryItem,
     Poll,
@@ -27,6 +31,7 @@ from .models import (
 )
 from .permissions import get_trip_member, is_editor_or_owner, is_owner, TripPermission
 from .serializers import (
+    ChatMessageSerializer,
     InviteAcceptSerializer,
     InviteRevokeSerializer,
     ItineraryItemSerializer,
@@ -94,6 +99,79 @@ class TripMembersView(APIView):
         )
         serializer = TripMemberSerializer(members, many=True)
         return Response(serializer.data)
+
+
+class TripChatMessagesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, trip_id):
+        trip = _get_trip_or_404(trip_id)
+        _require_member(request, trip)
+
+        limit_raw = request.query_params.get("limit", "50")
+        try:
+            limit = min(int(limit_raw), 200)
+        except ValueError:
+            raise ValidationError("limit must be an integer.")
+
+        before = request.query_params.get("before")
+        before_dt = None
+        if before:
+            before_dt = parse_datetime(before)
+            if before_dt is None:
+                raise ValidationError("before must be an ISO 8601 datetime.")
+            if timezone.is_naive(before_dt):
+                before_dt = timezone.make_aware(before_dt, timezone.get_current_timezone())
+
+        queryset = (
+            ChatMessage.objects.filter(trip=trip)
+            .select_related("sender")
+            .order_by("-created_at")
+        )
+        if before_dt:
+            queryset = queryset.filter(created_at__lt=before_dt)
+
+        messages = list(queryset[:limit])
+        messages.reverse()
+        return Response(ChatMessageSerializer(messages, many=True).data)
+
+    def post(self, request, trip_id):
+        trip = _get_trip_or_404(trip_id)
+        member = _require_member(request, trip)
+        if not member:
+            raise PermissionDenied("Not a trip member.")
+
+        content = (request.data.get("content") or "").strip()
+        if not content:
+            raise ValidationError("content is required.")
+
+        client_id = request.data.get("client_id")
+        if client_id:
+            existing = (
+                ChatMessage.objects.filter(trip=trip, sender=request.user, client_id=client_id)
+                .select_related("sender")
+                .first()
+            )
+            if existing:
+                return Response(ChatMessageSerializer(existing).data, status=status.HTTP_200_OK)
+
+        message = ChatMessage.objects.create(
+            trip=trip,
+            sender=request.user,
+            content=content,
+            client_id=client_id,
+        )
+        message = ChatMessage.objects.select_related("sender").get(id=message.id)
+
+        payload = ChatMessageSerializer(message).data
+        channel_layer = get_channel_layer()
+        if channel_layer is not None:
+            async_to_sync(channel_layer.group_send)(
+                f"trip_{trip_id}",
+                {"type": "chat.message", "message": payload},
+            )
+
+        return Response(payload, status=status.HTTP_201_CREATED)
 
 
 class TripItineraryView(APIView):

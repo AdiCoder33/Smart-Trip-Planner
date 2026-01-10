@@ -8,6 +8,9 @@ import 'core/connectivity/connectivity_cubit.dart';
 import 'core/connectivity/connectivity_service.dart';
 import 'core/network/dio_client.dart';
 import 'core/storage/token_storage.dart';
+import 'core/sync/pending_action.dart';
+import 'core/sync/sync_queue.dart';
+import 'core/sync/sync_service.dart';
 import 'features/auth/data/datasources/auth_remote_data_source.dart';
 import 'features/auth/data/repositories/auth_repository_impl.dart';
 import 'features/auth/domain/usecases/get_me.dart';
@@ -15,9 +18,24 @@ import 'features/auth/domain/usecases/login_user.dart';
 import 'features/auth/domain/usecases/register_user.dart';
 import 'features/auth/presentation/bloc/auth_bloc.dart';
 import 'features/auth/presentation/screens/login_screen.dart';
+import 'features/trips/data/datasources/chat_local_data_source.dart';
+import 'features/trips/data/datasources/chat_remote_data_source.dart';
+import 'features/trips/data/datasources/collaborators_remote_data_source.dart';
+import 'features/trips/data/datasources/itinerary_local_data_source.dart';
+import 'features/trips/data/datasources/itinerary_remote_data_source.dart';
+import 'features/trips/data/datasources/polls_local_data_source.dart';
+import 'features/trips/data/datasources/polls_remote_data_source.dart';
 import 'features/trips/data/datasources/trips_local_data_source.dart';
 import 'features/trips/data/datasources/trips_remote_data_source.dart';
+import 'features/trips/data/models/chat_message_model.dart';
+import 'features/trips/data/models/itinerary_item_model.dart';
+import 'features/trips/data/models/poll_model.dart';
+import 'features/trips/data/models/poll_option_model.dart';
 import 'features/trips/data/models/trip_model.dart';
+import 'features/trips/data/repositories/chat_repository_impl.dart';
+import 'features/trips/data/repositories/collaborators_repository_impl.dart';
+import 'features/trips/data/repositories/itinerary_repository_impl.dart';
+import 'features/trips/data/repositories/polls_repository_impl.dart';
 import 'features/trips/data/repositories/trips_repository_impl.dart';
 import 'features/trips/domain/usecases/create_trip.dart';
 import 'features/trips/domain/usecases/get_cached_trips.dart';
@@ -29,9 +47,19 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
   Hive.registerAdapter(TripModelAdapter());
+  Hive.registerAdapter(ItineraryItemModelAdapter());
+  Hive.registerAdapter(PollOptionModelAdapter());
+  Hive.registerAdapter(PollModelAdapter());
+  Hive.registerAdapter(PendingActionAdapter());
+  Hive.registerAdapter(ChatMessageModelAdapter());
   await Hive.openBox<TripModel>('trips');
+  await Hive.openBox<ItineraryItemModel>('itinerary_items');
+  await Hive.openBox<PollModel>('polls');
+  await Hive.openBox<PendingAction>('sync_queue');
+  await Hive.openBox<ChatMessageModel>('chat_messages');
 
   const secureStorage = FlutterSecureStorage();
+  final connectivityService = ConnectivityService();
   final tokenStorage = TokenStorage(secureStorage);
   final dioClient = DioClient(baseUrl: ApiConfig.baseUrl, tokenStorage: tokenStorage);
 
@@ -48,55 +76,120 @@ Future<void> main() async {
     localDataSource: tripsLocal,
   );
 
+  final itineraryLocal = ItineraryLocalDataSource(Hive.box<ItineraryItemModel>('itinerary_items'));
+  final itineraryRemote = ItineraryRemoteDataSource(dioClient.dio);
+  final itineraryRepository = ItineraryRepositoryImpl(
+    remoteDataSource: itineraryRemote,
+    localDataSource: itineraryLocal,
+  );
+
+  final pollsLocal = PollsLocalDataSource(Hive.box<PollModel>('polls'));
+  final pollsRemote = PollsRemoteDataSource(dioClient.dio);
+  final pollsRepository = PollsRepositoryImpl(
+    remoteDataSource: pollsRemote,
+    localDataSource: pollsLocal,
+  );
+
+  final collaboratorsRemote = CollaboratorsRemoteDataSource(dioClient.dio);
+  final collaboratorsRepository = CollaboratorsRepositoryImpl(remoteDataSource: collaboratorsRemote);
+
+  final chatLocal = ChatLocalDataSource(Hive.box<ChatMessageModel>('chat_messages'));
+  final chatRemote = ChatRemoteDataSource(dioClient.dio, tokenStorage);
+  final chatRepository = ChatRepositoryImpl(
+    remoteDataSource: chatRemote,
+    localDataSource: chatLocal,
+  );
+
+  final syncQueue = SyncQueue(Hive.box<PendingAction>('sync_queue'));
+  final syncService = SyncService(
+    queue: syncQueue,
+    itineraryRemote: itineraryRemote,
+    itineraryLocal: itineraryLocal,
+    pollsRemote: pollsRemote,
+    pollsLocal: pollsLocal,
+  );
+
   runApp(SmartTripPlannerApp(
     authRepository: authRepository,
     tripsRepository: tripsRepository,
+    itineraryRepository: itineraryRepository,
+    pollsRepository: pollsRepository,
+    collaboratorsRepository: collaboratorsRepository,
+    chatRepository: chatRepository,
+    connectivityService: connectivityService,
+    syncQueue: syncQueue,
+    syncService: syncService,
   ));
 }
 
 class SmartTripPlannerApp extends StatelessWidget {
   final AuthRepositoryImpl authRepository;
   final TripsRepositoryImpl tripsRepository;
+  final ItineraryRepositoryImpl itineraryRepository;
+  final PollsRepositoryImpl pollsRepository;
+  final CollaboratorsRepositoryImpl collaboratorsRepository;
+  final ChatRepositoryImpl chatRepository;
+  final ConnectivityService connectivityService;
+  final SyncQueue syncQueue;
+  final SyncService syncService;
 
   const SmartTripPlannerApp({
     super.key,
     required this.authRepository,
     required this.tripsRepository,
+    required this.itineraryRepository,
+    required this.pollsRepository,
+    required this.collaboratorsRepository,
+    required this.chatRepository,
+    required this.connectivityService,
+    required this.syncQueue,
+    required this.syncService,
   });
 
   @override
   Widget build(BuildContext context) {
-    final connectivityService = ConnectivityService();
-
-    return MultiBlocProvider(
+    return MultiRepositoryProvider(
       providers: [
-        BlocProvider(
-          create: (_) => AuthBloc(
-            loginUser: LoginUser(authRepository),
-            registerUser: RegisterUser(authRepository),
-            getMe: GetMe(authRepository),
-            authRepository: authRepository,
-          )..add(const AuthStarted()),
-        ),
-        BlocProvider(
-          create: (_) => TripsBloc(
-            getTrips: GetTrips(tripsRepository),
-            getCachedTrips: GetCachedTrips(tripsRepository),
-            createTrip: CreateTrip(tripsRepository),
-            connectivityService: connectivityService,
-          ),
-        ),
-        BlocProvider(
-          create: (_) => ConnectivityCubit(connectivityService),
-        ),
+        RepositoryProvider.value(value: authRepository),
+        RepositoryProvider.value(value: tripsRepository),
+        RepositoryProvider.value(value: itineraryRepository),
+        RepositoryProvider.value(value: pollsRepository),
+        RepositoryProvider.value(value: collaboratorsRepository),
+        RepositoryProvider.value(value: chatRepository),
+        RepositoryProvider.value(value: connectivityService),
+        RepositoryProvider.value(value: syncQueue),
+        RepositoryProvider.value(value: syncService),
       ],
-      child: MaterialApp(
-        title: 'Smart Trip Planner',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-          useMaterial3: true,
+      child: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (_) => AuthBloc(
+              loginUser: LoginUser(authRepository),
+              registerUser: RegisterUser(authRepository),
+              getMe: GetMe(authRepository),
+              authRepository: authRepository,
+            )..add(const AuthStarted()),
+          ),
+          BlocProvider(
+            create: (_) => TripsBloc(
+              getTrips: GetTrips(tripsRepository),
+              getCachedTrips: GetCachedTrips(tripsRepository),
+              createTrip: CreateTrip(tripsRepository),
+              connectivityService: connectivityService,
+            ),
+          ),
+          BlocProvider(
+            create: (_) => ConnectivityCubit(connectivityService),
+          ),
+        ],
+        child: MaterialApp(
+          title: 'Smart Trip Planner',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+            useMaterial3: true,
+          ),
+          home: const AuthGate(),
         ),
-        home: const AuthGate(),
       ),
     );
   }

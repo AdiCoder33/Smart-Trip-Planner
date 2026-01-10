@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import ItineraryItem, Poll, PollOption, Trip, TripInvite, TripMember, TripRole
+from .models import ChatMessage, ItineraryItem, Poll, PollOption, Trip, TripInvite, TripMember, TripRole
 
 
 class TripSerializer(serializers.ModelSerializer):
@@ -82,6 +82,28 @@ class TripMemberSerializer(serializers.ModelSerializer):
     class Meta:
         model = TripMember
         fields = ("id", "user", "role", "status", "created_at")
+        read_only_fields = fields
+
+
+class ChatSenderSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    name = serializers.CharField(allow_blank=True, required=False)
+
+
+class ChatMessageSerializer(serializers.ModelSerializer):
+    trip_id = serializers.UUIDField(source="trip_id", read_only=True)
+    sender = ChatSenderSerializer(source="sender", read_only=True)
+
+    class Meta:
+        model = ChatMessage
+        fields = (
+            "id",
+            "trip_id",
+            "sender",
+            "content",
+            "client_id",
+            "created_at",
+        )
         read_only_fields = fields
 
 

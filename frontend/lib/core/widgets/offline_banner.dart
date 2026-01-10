@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 class OfflineBanner extends StatelessWidget {
   final bool isOnline;
+  final String message;
 
-  const OfflineBanner({super.key, required this.isOnline});
+  const OfflineBanner({
+    super.key,
+    required this.isOnline,
+    this.message = 'Offline mode: showing cached trips',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -14,9 +19,9 @@ class OfflineBanner extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
       color: Colors.amber.shade200,
-      child: const Text(
-        'Offline mode: showing cached trips',
-        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+      child: Text(
+        message,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
       ),
     );
   }

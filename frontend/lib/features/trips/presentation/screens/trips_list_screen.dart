@@ -6,7 +6,7 @@ import '../../../../core/widgets/offline_banner.dart';
 import '../../../../core/widgets/skeleton_loader.dart';
 import '../../domain/entities/trip.dart';
 import '../bloc/trips_bloc.dart';
-import '../widgets/trip_card.dart';
+import 'package:smart_trip_planner/features/trips/presentation/widgets/trip_card.dart';
 import 'trip_detail_screen.dart';
 
 class TripsListScreen extends StatefulWidget {

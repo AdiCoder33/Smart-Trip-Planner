@@ -19,9 +19,8 @@ class TripCard extends StatelessWidget {
         subtitle: Text(
           [
             if (trip.destination?.isNotEmpty == true) trip.destination,
-            if (trip.startDate != null)
-              '${trip.startDate!.toIso8601String().split('T').first}'
-          ].whereType<String>().join(' • '),
+            if (trip.startDate != null) trip.startDate!.toIso8601String().split('T').first
+          ].whereType<String>().join(' - '),
         ),
         trailing: trip.isPending
             ? Container(

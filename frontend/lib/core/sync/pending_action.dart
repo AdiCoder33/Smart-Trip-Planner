@@ -9,6 +9,7 @@ class PendingActionType {
   static const String reorderItinerary = 'REORDER_ITINERARY';
   static const String createPoll = 'CREATE_POLL';
   static const String votePoll = 'VOTE_POLL';
+  static const String sendChatMessage = 'SEND_CHAT_MESSAGE';
 }
 
 class PendingAction extends Equatable {

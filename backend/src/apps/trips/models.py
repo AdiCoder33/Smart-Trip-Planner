@@ -2,6 +2,7 @@ import uuid
 
 from django.conf import settings
 from django.db import models
+from django.db.models import Q
 from django.utils import timezone
 
 
@@ -54,6 +55,35 @@ class TripMember(models.Model):
 
     def __str__(self) -> str:
         return f"{self.user_id} -> {self.trip_id} ({self.role})"
+
+
+class ChatMessage(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name="chat_messages")
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="sent_chat_messages",
+    )
+    content = models.TextField()
+    client_id = models.CharField(max_length=64, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["trip", "created_at"], name="trips_chat_trip_created_idx"),
+        ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["trip", "sender", "client_id"],
+                name="unique_chat_client_id",
+                condition=Q(client_id__isnull=False),
+            )
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.trip_id} - {self.sender_id}"
 
 
 class ItineraryItem(models.Model):

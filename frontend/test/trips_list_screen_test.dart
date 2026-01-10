@@ -13,9 +13,8 @@ class MockTripsBloc extends MockBloc<TripsEvent, TripsState> implements TripsBlo
 
 class FakeTripsEvent extends Fake implements TripsEvent {}
 
-class TestConnectivityCubit extends Cubit<ConnectivityState> {
-  TestConnectivityCubit(super.state);
-}
+class MockConnectivityCubit extends MockCubit<ConnectivityState>
+    implements ConnectivityCubit {}
 
 void main() {
   setUpAll(() {
@@ -30,7 +29,14 @@ void main() {
     when(() => tripsBloc.state).thenReturn(state);
     whenListen(tripsBloc, Stream.value(state), initialState: state);
 
-    final connectivityCubit = TestConnectivityCubit(const ConnectivityState(isOnline: true));
+    final connectivityCubit = MockConnectivityCubit();
+    const connectivityState = ConnectivityState(isOnline: true);
+    when(() => connectivityCubit.state).thenReturn(connectivityState);
+    whenListen(
+      connectivityCubit,
+      Stream<ConnectivityState>.value(connectivityState),
+      initialState: connectivityState,
+    );
 
     await tester.pumpWidget(
       MultiBlocProvider(

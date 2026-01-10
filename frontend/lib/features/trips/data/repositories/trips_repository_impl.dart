@@ -3,7 +3,6 @@ import '../../domain/entities/trip.dart';
 import '../../domain/repositories/trips_repository.dart';
 import '../datasources/trips_local_data_source.dart';
 import '../datasources/trips_remote_data_source.dart';
-import '../models/trip_model.dart';
 
 class TripsRepositoryImpl implements TripsRepository {
   final TripsRemoteDataSource remoteDataSource;
