@@ -46,7 +46,7 @@ class ItineraryTab extends StatelessWidget {
                       ),
                   icon: const Icon(Icons.refresh),
                 ),
-                TextButton.icon(
+                FilledButton.icon(
                   onPressed: () => _showFormSheet(context),
                   icon: const Icon(Icons.add),
                   label: const Text('Add item'),
@@ -206,49 +206,184 @@ class _ItineraryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final subtitle = _buildSubtitle(item);
-    return Card(
+    final theme = Theme.of(context);
+    final dateLabel = _buildDateLabel(item);
+    final timeLabel = _buildTimeLabel(item);
+    final location = item.location?.trim();
+    final notes = item.notes?.trim();
+
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
-      child: ListTile(
-        title: Text(item.title),
-        subtitle: subtitle.isEmpty ? null : Text(subtitle),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (item.isPending)
-              const Padding(
-                padding: EdgeInsets.only(right: 8),
-                child: Text('Pending', style: TextStyle(fontSize: 11, color: Colors.orange)),
-              ),
-            IconButton(onPressed: onEdit, icon: const Icon(Icons.edit)),
-            IconButton(onPressed: onDelete, icon: const Icon(Icons.delete_outline)),
-            ReorderableDragStartListener(
-              index: index,
-              child: const Icon(Icons.drag_handle),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 6,
+            height: 110,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.7),
+              borderRadius: const BorderRadius.horizontal(left: Radius.circular(16)),
             ),
-          ],
-        ),
+          ),
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          item.title,
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                      if (item.isPending)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'Pending',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      if (dateLabel != null)
+                        _MetaChip(
+                          icon: Icons.calendar_month_outlined,
+                          label: dateLabel,
+                        ),
+                      if (timeLabel != null)
+                        _MetaChip(
+                          icon: Icons.schedule_outlined,
+                          label: timeLabel,
+                        ),
+                      if (location != null && location.isNotEmpty)
+                        _MetaChip(
+                          icon: Icons.place_outlined,
+                          label: location,
+                        ),
+                    ],
+                  ),
+                  if (notes != null && notes.isNotEmpty) ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      notes,
+                      style: theme.textTheme.bodyMedium?.copyWith(color: Colors.black54),
+                    ),
+                  ],
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _ActionIcon(icon: Icons.edit_outlined, onPressed: onEdit),
+                      _ActionIcon(icon: Icons.delete_outline, onPressed: onDelete),
+                      ReorderableDragStartListener(
+                        index: index,
+                        child: const _ActionIcon(icon: Icons.drag_handle),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
-  String _buildSubtitle(ItineraryItemEntity item) {
-    final details = <String>[];
-    if (item.date != null) {
-      details.add('Date: ${item.date!.toIso8601String().split('T').first}');
+  String? _buildDateLabel(ItineraryItemEntity item) {
+    if (item.date == null) {
+      return null;
     }
-    if (item.startTime != null || item.endTime != null) {
-      final start = item.startTime ?? '--:--';
-      final end = item.endTime ?? '--:--';
-      details.add('Time: $start - $end');
+    final date = item.date!;
+    final year = date.year.toString().padLeft(4, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final day = date.day.toString().padLeft(2, '0');
+    return '$year-$month-$day';
+  }
+
+  String? _buildTimeLabel(ItineraryItemEntity item) {
+    if (item.startTime == null && item.endTime == null) {
+      return null;
     }
-    if (item.location != null && item.location!.trim().isNotEmpty) {
-      details.add('Location: ${item.location}');
-    }
-    if (item.notes != null && item.notes!.trim().isNotEmpty) {
-      details.add(item.notes!);
-    }
-    return details.join('\n');
+    final start = item.startTime ?? '--:--';
+    final end = item.endTime ?? '--:--';
+    return '$start - $end';
+  }
+}
+
+class _MetaChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _MetaChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceVariant,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: theme.colorScheme.onSurface.withOpacity(0.7)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: theme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActionIcon extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  const _ActionIcon({required this.icon, this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return IconButton(
+      onPressed: onPressed,
+      icon: Icon(icon, color: theme.colorScheme.primary),
+      iconSize: 20,
+      padding: EdgeInsets.zero,
+      constraints: const BoxConstraints.tightFor(width: 36, height: 36),
+      splashRadius: 20,
+    );
   }
 }
 

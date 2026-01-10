@@ -41,7 +41,7 @@ class PollsTab extends StatelessWidget {
               children: [
                 Text('Polls', style: Theme.of(context).textTheme.titleMedium),
                 const Spacer(),
-                TextButton.icon(
+                FilledButton.icon(
                   onPressed: () => _showCreatePoll(context),
                   icon: const Icon(Icons.add),
                   label: const Text('New poll'),
@@ -120,42 +120,57 @@ class _PollCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final theme = Theme.of(context);
+    final totalVotes = poll.options.fold<int>(0, (sum, option) => sum + option.voteCount);
+
+    return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    poll.question,
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Text(
+                  poll.question,
+                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
-                if (!poll.isActive)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Text('Closed', style: TextStyle(color: Colors.red)),
-                  ),
-                if (poll.isPending)
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Text('Pending', style: TextStyle(color: Colors.orange)),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            ...poll.options.map((option) => _PollOptionTile(
-                  option: option,
-                  selectedId: poll.userVoteOptionId,
-                  disabled: !poll.isActive || poll.isPending,
-                  onSelected: onVote,
-                )),
-          ],
-        ),
+              ),
+              if (!poll.isActive)
+                const _StatusChip(
+                  label: 'Closed',
+                  color: Colors.red,
+                ),
+              if (poll.isPending)
+                const _StatusChip(
+                  label: 'Pending',
+                  color: Colors.orange,
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...poll.options.map((option) => _PollOptionTile(
+                option: option,
+                selectedId: poll.userVoteOptionId,
+                disabled: !poll.isActive || poll.isPending,
+                totalVotes: totalVotes,
+                onSelected: onVote,
+              )),
+        ],
       ),
     );
   }
@@ -165,25 +180,114 @@ class _PollOptionTile extends StatelessWidget {
   final PollOptionEntity option;
   final String? selectedId;
   final bool disabled;
+  final int totalVotes;
   final ValueChanged<String> onSelected;
 
   const _PollOptionTile({
     required this.option,
     required this.selectedId,
     required this.disabled,
+    required this.totalVotes,
     required this.onSelected,
   });
 
   @override
   Widget build(BuildContext context) {
-    return RadioListTile<String>(
-      value: option.id,
-      groupValue: selectedId,
-      onChanged: disabled ? null : (value) => value == null ? null : onSelected(value),
-      title: Text(option.text),
-      subtitle: Text('${option.voteCount} votes'),
-      dense: true,
-      contentPadding: EdgeInsets.zero,
+    final theme = Theme.of(context);
+    final isSelected = option.id == selectedId;
+    final ratio = totalVotes == 0 ? 0.0 : option.voteCount / totalVotes;
+    final percent = (ratio * 100).round();
+    final voteLabel = option.voteCount == 1 ? '1 vote' : '${option.voteCount} votes';
+
+    return InkWell(
+      onTap: disabled ? null : () => onSelected(option.id),
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surfaceVariant.withOpacity(0.6),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outlineVariant,
+            width: isSelected ? 1.4 : 1,
+          ),
+        ),
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: FractionallySizedBox(
+                  alignment: Alignment.centerLeft,
+                  widthFactor: ratio.clamp(0.0, 1.0),
+                  child: Container(
+                    color: theme.colorScheme.primary.withOpacity(0.14),
+                  ),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                Icon(
+                  isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+                  size: 20,
+                  color: isSelected ? theme.colorScheme.primary : Colors.black38,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        option.text,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        voteLabel,
+                        style: theme.textTheme.bodySmall?.copyWith(color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  '$percent%',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: isSelected ? theme.colorScheme.primary : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final String label;
+  final Color color;
+
+  const _StatusChip({required this.label, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 8, top: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600),
+      ),
     );
   }
 }

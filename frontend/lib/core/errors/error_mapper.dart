@@ -4,6 +4,7 @@ import 'app_exception.dart';
 
 AppException mapDioError(Object error) {
   if (error is DioException) {
+    final statusCode = error.response?.statusCode;
     final responseData = error.response?.data;
     if (responseData is Map && responseData['error'] is Map) {
       final errorMap = responseData['error'] as Map;
@@ -12,11 +13,15 @@ AppException mapDioError(Object error) {
       return AppException(message, code: code);
     }
 
+    if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
+      return AppException('Server waking up. Please wait and try again.', code: 'SERVER_WAKING');
+    }
+
     if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.connectionError) {
-      return AppException('Network error. Please check your connection.', code: 'NETWORK');
+      return AppException('Server waking up. Please wait and try again.', code: 'SERVER_WAKING');
     }
 
     if (error.response?.statusCode == 401) {
