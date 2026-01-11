@@ -12,5 +12,6 @@ abstract class CollaboratorsRepository {
   });
   Future<TripMemberEntity> acceptInvite({required String token});
   Future<TripInviteEntity> revokeInvite({required String inviteId});
+  Future<List<TripInviteEntity>> getSentInvites();
   Future<List<UserLookupEntity>> searchUsers({required String tripId, required String query});
 }

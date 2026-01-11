@@ -52,6 +52,7 @@ from .serializers import (
     PollVoteSerializer,
     TripInviteCreateSerializer,
     TripInviteSerializer,
+    TripInviteSentSerializer,
     TripMemberSerializer,
     TripSerializer,
     UserLookupSerializer,
@@ -683,6 +684,18 @@ class InviteRevokeView(APIView):
         invite.status = InviteStatus.REVOKED
         invite.save(update_fields=["status"])
         return Response(TripInviteSerializer(invite).data)
+
+
+class SentInvitesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        invites = (
+            TripInvite.objects.filter(invited_by=request.user)
+            .select_related("trip")
+            .order_by("-created_at")
+        )
+        return Response(TripInviteSentSerializer(invites, many=True).data)
 
 
 class TripPollsView(APIView):

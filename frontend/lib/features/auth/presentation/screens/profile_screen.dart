@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../bloc/auth_bloc.dart';
 import '../../../trips/domain/entities/trip.dart';
+import '../../../trips/domain/usecases/get_sent_invites.dart';
+import '../../../trips/presentation/bloc/sent_invites_cubit.dart';
 import '../../../trips/presentation/bloc/trips_bloc.dart';
+import '../../../trips/data/repositories/collaborators_repository_impl.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -14,70 +17,120 @@ class ProfileScreen extends StatelessWidget {
     final nameValue = (user?.name ?? '').trim();
     final displayName = nameValue.isNotEmpty ? nameValue : 'Traveler';
 
+    final collaboratorsRepository = context.read<CollaboratorsRepositoryImpl>();
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
       ),
-      body: BlocBuilder<TripsBloc, TripsState>(
-        builder: (context, tripsState) {
-          final trips = tripsState.trips;
-          final completed = trips.where(_isCompleted).toList()
-            ..sort((a, b) => _endDateOrMin(b).compareTo(_endDateOrMin(a)));
-          final upcoming = trips.where((trip) => !_isCompleted(trip)).toList();
+      body: BlocProvider(
+        create: (_) => SentInvitesCubit(
+          getSentInvites: GetSentInvites(collaboratorsRepository),
+        )..load(),
+        child: BlocBuilder<TripsBloc, TripsState>(
+          builder: (context, tripsState) {
+            final trips = tripsState.trips;
+            final completed = trips.where(_isCompleted).toList()
+              ..sort((a, b) => _endDateOrMin(b).compareTo(_endDateOrMin(a)));
+            final upcoming = trips.where((trip) => !_isCompleted(trip)).toList();
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              _ProfileHeader(
-                name: displayName,
-                email: user?.email ?? 'Unknown',
-              ),
-              const SizedBox(height: 16),
-              _StatsRow(
-                total: trips.length,
-                completed: completed.length,
-                upcoming: upcoming.length,
-              ),
-              const SizedBox(height: 24),
-              Text('Tour History', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 12),
-              if (completed.isEmpty)
-                Text(
-                  'No completed tours yet.',
-                  style: Theme.of(context).textTheme.bodyMedium,
-                )
-              else
-                ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: completed.length,
-                  separatorBuilder: (_, __) => const Divider(height: 16),
-                  itemBuilder: (context, index) {
-                    final trip = completed[index];
-                    final subtitle = _buildTripSubtitle(trip);
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(trip.title),
-                      subtitle: subtitle == null ? null : Text(subtitle),
-                      trailing: const Icon(Icons.check_circle, color: Colors.teal),
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                _ProfileHeader(
+                  name: displayName,
+                  email: user?.email ?? 'Unknown',
+                ),
+                const SizedBox(height: 16),
+                _StatsRow(
+                  total: trips.length,
+                  completed: completed.length,
+                  upcoming: upcoming.length,
+                ),
+                const SizedBox(height: 24),
+                Text('Tour History', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 12),
+                if (completed.isEmpty)
+                  Text(
+                    'No completed tours yet.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  )
+                else
+                  ListView.separated(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: completed.length,
+                    separatorBuilder: (_, __) => const Divider(height: 16),
+                    itemBuilder: (context, index) {
+                      final trip = completed[index];
+                      final subtitle = _buildTripSubtitle(trip);
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(trip.title),
+                        subtitle: subtitle == null ? null : Text(subtitle),
+                        trailing: const Icon(Icons.check_circle, color: Colors.teal),
+                      );
+                    },
+                  ),
+                const SizedBox(height: 24),
+                Text('Sent Invites', style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: 12),
+                BlocBuilder<SentInvitesCubit, SentInvitesState>(
+                  builder: (context, state) {
+                    if (state.status == SentInvitesStatus.loading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (state.status == SentInvitesStatus.error) {
+                      return Text(
+                        state.message ?? 'Failed to load sent invites.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      );
+                    }
+                    if (state.invites.isEmpty) {
+                      return Text(
+                        'No sent invites yet.',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      );
+                    }
+                    return ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: state.invites.length,
+                      separatorBuilder: (_, __) => const Divider(height: 16),
+                      itemBuilder: (context, index) {
+                        final invite = state.invites[index];
+                        final tripTitle = invite.tripTitle ?? 'Trip';
+                        final subtitleParts = <String>[
+                          invite.email,
+                          invite.role,
+                          invite.status,
+                        ];
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: const Icon(Icons.mail_outline),
+                          title: Text(tripTitle),
+                          subtitle: Text(subtitleParts.join(' • ')),
+                        );
+                      },
                     );
                   },
                 ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    context.read<AuthBloc>().add(const LogoutRequested());
-                    Navigator.of(context).popUntil((route) => route.isFirst);
-                  },
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Logout'),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      context.read<AuthBloc>().add(const LogoutRequested());
+                      Navigator.of(context).popUntil((route) => route.isFirst);
+                    },
+                    icon: const Icon(Icons.logout),
+                    label: const Text('Logout'),
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
+              ],
+            );
+          },
+        ),
       ),
     );
   }

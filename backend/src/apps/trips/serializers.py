@@ -81,6 +81,31 @@ class InviteRevokeSerializer(serializers.Serializer):
     invite_id = serializers.UUIDField()
 
 
+class TripInfoSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trip
+        fields = ("id", "title")
+
+
+class TripInviteSentSerializer(serializers.ModelSerializer):
+    invited_by = serializers.UUIDField(source="invited_by_id", read_only=True)
+    trip = TripInfoSerializer(read_only=True)
+
+    class Meta:
+        model = TripInvite
+        fields = (
+            "id",
+            "email",
+            "role",
+            "status",
+            "invited_by",
+            "trip",
+            "created_at",
+            "expires_at",
+        )
+        read_only_fields = fields
+
+
 class MemberUserSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     email = serializers.EmailField()

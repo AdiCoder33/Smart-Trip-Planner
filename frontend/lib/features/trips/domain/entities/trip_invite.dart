@@ -6,6 +6,8 @@ class TripInviteEntity extends Equatable {
   final String role;
   final String status;
   final String invitedBy;
+  final String? tripId;
+  final String? tripTitle;
   final DateTime? createdAt;
   final DateTime? expiresAt;
 
@@ -15,10 +17,22 @@ class TripInviteEntity extends Equatable {
     required this.role,
     required this.status,
     required this.invitedBy,
+    this.tripId,
+    this.tripTitle,
     this.createdAt,
     this.expiresAt,
   });
 
   @override
-  List<Object?> get props => [id, email, role, status, invitedBy, createdAt, expiresAt];
+  List<Object?> get props => [
+        id,
+        email,
+        role,
+        status,
+        invitedBy,
+        tripId,
+        tripTitle,
+        createdAt,
+        expiresAt,
+      ];
 }
