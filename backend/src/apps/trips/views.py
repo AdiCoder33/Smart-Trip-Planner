@@ -698,6 +698,18 @@ class SentInvitesView(APIView):
         return Response(TripInviteSentSerializer(invites, many=True).data)
 
 
+class ReceivedInvitesView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        invites = (
+            TripInvite.objects.filter(email__iexact=request.user.email)
+            .select_related("trip")
+            .order_by("-created_at")
+        )
+        return Response(TripInviteSentSerializer(invites, many=True).data)
+
+
 class TripPollsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 

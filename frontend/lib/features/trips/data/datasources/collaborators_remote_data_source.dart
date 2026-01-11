@@ -49,6 +49,12 @@ class CollaboratorsRemoteDataSource {
     return data.map((item) => TripInviteModel.fromJson(item as Map<String, dynamic>)).toList();
   }
 
+  Future<List<TripInviteModel>> fetchReceivedInvites() async {
+    final response = await dio.get('/api/invites/received');
+    final data = response.data as List;
+    return data.map((item) => TripInviteModel.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
   Future<List<UserLookupModel>> searchUsers({
     required String tripId,
     required String query,

@@ -69,6 +69,15 @@ class CollaboratorsRepositoryImpl implements CollaboratorsRepository {
   }
 
   @override
+  Future<List<TripInviteEntity>> getReceivedInvites() async {
+    try {
+      return await remoteDataSource.fetchReceivedInvites();
+    } catch (error) {
+      throw mapDioError(error);
+    }
+  }
+
+  @override
   Future<List<UserLookupEntity>> searchUsers({
     required String tripId,
     required String query,
