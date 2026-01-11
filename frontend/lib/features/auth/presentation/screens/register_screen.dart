@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -17,15 +15,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
-  bool _showWakeHint = false;
-  Timer? _wakeTimer;
 
   @override
   void dispose() {
     _emailController.dispose();
     _passwordController.dispose();
     _nameController.dispose();
-    _wakeTimer?.cancel();
     super.dispose();
   }
 
@@ -34,11 +29,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final theme = Theme.of(context);
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
-        if (state.status == AuthStatus.loading) {
-          _startWakeHintTimer();
-        } else {
-          _stopWakeHintTimer();
-        }
         if (state.status == AuthStatus.registered && state.message != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(state.message!)),
@@ -138,10 +128,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             );
                           },
                         ),
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: _showWakeHint ? const _ServerWakeHint() : const SizedBox.shrink(),
-                        ),
                       ],
                     ),
                   ),
@@ -171,60 +157,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
             name: _nameController.text.trim().isEmpty ? null : _nameController.text.trim(),
           ),
         );
-  }
-
-  void _startWakeHintTimer() {
-    _wakeTimer?.cancel();
-    if (_showWakeHint) {
-      setState(() => _showWakeHint = false);
-    }
-    _wakeTimer = Timer(const Duration(seconds: 3), () {
-      if (!mounted) return;
-      if (context.read<AuthBloc>().state.status == AuthStatus.loading) {
-        setState(() => _showWakeHint = true);
-      }
-    });
-  }
-
-  void _stopWakeHintTimer() {
-    _wakeTimer?.cancel();
-    _wakeTimer = null;
-    if (_showWakeHint) {
-      setState(() => _showWakeHint = false);
-    }
-  }
-}
-
-class _ServerWakeHint extends StatelessWidget {
-  const _ServerWakeHint();
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Container(
-      margin: const EdgeInsets.only(top: 12),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.primary.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: theme.colorScheme.primary.withOpacity(0.25)),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.cloud_sync_outlined, size: 18, color: theme.colorScheme.primary),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              'Server waking up. Please wait...',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }
 

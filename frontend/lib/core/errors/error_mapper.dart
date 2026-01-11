@@ -14,14 +14,14 @@ AppException mapDioError(Object error) {
     }
 
     if (statusCode == 502 || statusCode == 503 || statusCode == 504) {
-      return AppException('Server waking up. Please wait and try again.', code: 'SERVER_WAKING');
+      return AppException('Unable to reach server. Please try again.', code: 'SERVER_UNAVAILABLE');
     }
 
     if (error.type == DioExceptionType.connectionTimeout ||
         error.type == DioExceptionType.receiveTimeout ||
         error.type == DioExceptionType.sendTimeout ||
         error.type == DioExceptionType.connectionError) {
-      return AppException('Server waking up. Please wait and try again.', code: 'SERVER_WAKING');
+      return AppException('Unable to reach server. Please try again.', code: 'NETWORK_ERROR');
     }
 
     if (error.response?.statusCode == 401) {

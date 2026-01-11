@@ -88,7 +88,7 @@ class MemberUserSerializer(serializers.Serializer):
 
 
 class TripMemberSerializer(serializers.ModelSerializer):
-    user = MemberUserSerializer(source="user")
+    user = MemberUserSerializer(read_only=True)
 
     class Meta:
         model = TripMember

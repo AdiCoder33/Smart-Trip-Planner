@@ -22,12 +22,23 @@ class CollaboratorsTab extends StatefulWidget {
 
 class _CollaboratorsTabState extends State<CollaboratorsTab> {
   final _emailController = TextEditingController();
+  final _searchController = TextEditingController();
   String _role = 'viewer';
+  String _query = '';
 
   @override
   void dispose() {
     _emailController.dispose();
+    _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() => _query = _searchController.text.trim().toLowerCase());
+    });
   }
 
   @override
@@ -47,6 +58,13 @@ class _CollaboratorsTabState extends State<CollaboratorsTab> {
           final isOwner = state.members.any(
             (member) => member.userId == userId && member.role == 'owner',
           );
+          final filteredMembers = _query.isEmpty
+              ? state.members
+              : state.members.where((member) {
+                  final name = member.name?.toLowerCase() ?? '';
+                  final email = member.email.toLowerCase();
+                  return name.contains(_query) || email.contains(_query);
+                }).toList();
 
           if (state.status == CollaboratorsStatus.loading && state.members.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -73,13 +91,33 @@ class _CollaboratorsTabState extends State<CollaboratorsTab> {
                 },
               ),
               const SizedBox(height: 8),
-              ...state.members.map(
-                (member) => ListTile(
-                  leading: const CircleAvatar(child: Icon(Icons.person)),
-                  title: Text(member.name?.isNotEmpty == true ? member.name! : member.email),
-                  subtitle: Text('${member.email} - ${member.role}'),
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: 'Search members by name or email',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => _searchController.clear(),
+                        ),
                 ),
               ),
+              const SizedBox(height: 8),
+              if (filteredMembers.isEmpty)
+                Text(
+                  'No members match your search.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                )
+              else
+                ...filteredMembers.map(
+                  (member) => ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(member.name?.isNotEmpty == true ? member.name! : member.email),
+                    subtitle: Text('${member.email} - ${member.role}'),
+                  ),
+                ),
               const SizedBox(height: 12),
               if (isOwner) ...[
                 const Divider(),
