@@ -392,29 +392,47 @@ class _InvitesList<C extends Cubit<S>, S> extends StatelessWidget {
       return null;
     }
     return SizedBox(
-      width: 64,
+      width: 48,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
-        mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(
-            icon: const Icon(Icons.close, color: Colors.redAccent, size: 18),
-            onPressed: onDecline == null ? null : () => onDecline!(invite),
-            tooltip: 'Decline',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-            visualDensity: VisualDensity.compact,
+          _InviteActionIcon(
+            icon: Icons.close,
+            color: Colors.redAccent,
+            onTap: onDecline == null ? null : () => onDecline!(invite),
           ),
           const SizedBox(width: 4),
-          IconButton(
-            icon: const Icon(Icons.check_circle, color: Colors.teal, size: 18),
-            onPressed: onAccept == null ? null : () => onAccept!(invite),
-            tooltip: 'Accept',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
-            visualDensity: VisualDensity.compact,
+          _InviteActionIcon(
+            icon: Icons.check_circle,
+            color: Colors.teal,
+            onTap: onAccept == null ? null : () => onAccept!(invite),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _InviteActionIcon extends StatelessWidget {
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _InviteActionIcon({
+    required this.icon,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkResponse(
+      onTap: onTap,
+      radius: 16,
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: Icon(icon, size: 18, color: color),
       ),
     );
   }
