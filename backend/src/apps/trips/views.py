@@ -10,7 +10,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.http import HttpResponse
 from django.db import transaction
-from django.db.models import Count, Max, Prefetch, Sum
+from django.db.models import Count, Max, Prefetch, Sum, Q
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_datetime
 from django.utils import timezone
@@ -54,6 +54,7 @@ from .serializers import (
     TripInviteSerializer,
     TripMemberSerializer,
     TripSerializer,
+    UserLookupSerializer,
 )
 
 logger = logging.getLogger("chat")
@@ -139,6 +140,40 @@ class TripMembersView(APIView):
         )
         serializer = TripMemberSerializer(members, many=True)
         return Response(serializer.data)
+
+
+class TripUserSearchView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, trip_id):
+        trip = _get_trip_or_404(trip_id)
+        member = _require_member(request, trip)
+        if not is_owner(member):
+            raise PermissionDenied("Only owners can search users.")
+
+        query = (request.query_params.get("q") or "").strip()
+        if len(query) < 2:
+            return Response([])
+
+        from django.contrib.auth import get_user_model
+
+        User = get_user_model()
+        member_ids = TripMember.objects.filter(trip=trip).values_list("user_id", flat=True)
+        invited_emails = TripInvite.objects.filter(
+            trip=trip,
+            status=InviteStatus.PENDING,
+            expires_at__gt=timezone.now(),
+        ).values_list("email", flat=True)
+
+        users = (
+            User.objects.filter(is_active=True)
+            .filter(Q(email__icontains=query) | Q(name__icontains=query))
+            .exclude(id__in=member_ids)
+            .exclude(email__in=invited_emails)
+            .order_by("email")[:10]
+        )
+
+        return Response(UserLookupSerializer(users, many=True).data)
 
 
 class TripChatKeyView(APIView):

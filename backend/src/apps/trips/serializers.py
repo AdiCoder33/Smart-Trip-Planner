@@ -96,6 +96,12 @@ class TripMemberSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class UserLookupSerializer(serializers.Serializer):
+    id = serializers.UUIDField()
+    email = serializers.EmailField()
+    name = serializers.CharField(allow_blank=True, required=False)
+
+
 class ChatSenderSerializer(serializers.Serializer):
     id = serializers.UUIDField()
     name = serializers.CharField(allow_blank=True, required=False)

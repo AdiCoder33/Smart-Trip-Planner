@@ -34,6 +34,7 @@ import '../../domain/usecases/get_trip_invites.dart';
 import '../../domain/usecases/get_trip_members.dart';
 import '../../domain/usecases/reorder_itinerary_items.dart';
 import '../../domain/usecases/revoke_invite.dart';
+import '../../domain/usecases/search_trip_users.dart';
 import '../../domain/usecases/send_trip_invite.dart';
 import '../../domain/usecases/update_itinerary_item.dart';
 import '../../domain/usecases/upsert_local_chat_message.dart';
@@ -105,6 +106,7 @@ class TripDetailScreen extends StatelessWidget {
             getTripInvites: GetTripInvites(collaboratorsRepository),
             sendTripInvite: SendTripInvite(collaboratorsRepository),
             revokeInvite: RevokeInvite(collaboratorsRepository),
+            searchTripUsers: SearchTripUsers(collaboratorsRepository),
             connectivityService: connectivityService,
           )..add(CollaboratorsStarted(tripId: trip.id)),
         ),

@@ -6,7 +6,10 @@ class CollaboratorsState extends Equatable {
   final CollaboratorsStatus status;
   final List<TripMemberEntity> members;
   final List<TripInviteEntity> invites;
+  final List<UserLookupEntity> searchResults;
   final bool isRefreshing;
+  final bool isSearching;
+  final String searchQuery;
   final String? message;
   final String? tripId;
 
@@ -14,7 +17,10 @@ class CollaboratorsState extends Equatable {
     this.status = CollaboratorsStatus.initial,
     this.members = const [],
     this.invites = const [],
+    this.searchResults = const [],
     this.isRefreshing = false,
+    this.isSearching = false,
+    this.searchQuery = '',
     this.message,
     this.tripId,
   });
@@ -23,7 +29,10 @@ class CollaboratorsState extends Equatable {
     CollaboratorsStatus? status,
     List<TripMemberEntity>? members,
     List<TripInviteEntity>? invites,
+    List<UserLookupEntity>? searchResults,
     bool? isRefreshing,
+    bool? isSearching,
+    String? searchQuery,
     String? message,
     String? tripId,
   }) {
@@ -31,12 +40,25 @@ class CollaboratorsState extends Equatable {
       status: status ?? this.status,
       members: members ?? this.members,
       invites: invites ?? this.invites,
+      searchResults: searchResults ?? this.searchResults,
       isRefreshing: isRefreshing ?? this.isRefreshing,
+      isSearching: isSearching ?? this.isSearching,
+      searchQuery: searchQuery ?? this.searchQuery,
       message: message,
       tripId: tripId ?? this.tripId,
     );
   }
 
   @override
-  List<Object?> get props => [status, members, invites, isRefreshing, message, tripId];
+  List<Object?> get props => [
+        status,
+        members,
+        invites,
+        searchResults,
+        isRefreshing,
+        isSearching,
+        searchQuery,
+        message,
+        tripId,
+      ];
 }

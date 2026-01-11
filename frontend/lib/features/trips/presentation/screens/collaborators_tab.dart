@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -23,13 +25,18 @@ class CollaboratorsTab extends StatefulWidget {
 class _CollaboratorsTabState extends State<CollaboratorsTab> {
   final _emailController = TextEditingController();
   final _searchController = TextEditingController();
+  final _userSearchController = TextEditingController();
+  Timer? _searchDebounce;
   String _role = 'viewer';
   String _query = '';
+  String _userQuery = '';
 
   @override
   void dispose() {
     _emailController.dispose();
     _searchController.dispose();
+    _userSearchController.dispose();
+    _searchDebounce?.cancel();
     super.dispose();
   }
 
@@ -39,6 +46,7 @@ class _CollaboratorsTabState extends State<CollaboratorsTab> {
     _searchController.addListener(() {
       setState(() => _query = _searchController.text.trim().toLowerCase());
     });
+    _userSearchController.addListener(_onUserSearchChanged);
   }
 
   @override
@@ -122,13 +130,7 @@ class _CollaboratorsTabState extends State<CollaboratorsTab> {
               if (isOwner) ...[
                 const Divider(),
                 const SizedBox(height: 12),
-                Text('Invite by email', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
+                Text('Invite collaborators', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: 8),
                 DropdownButtonFormField<String>(
                   value: _role,
@@ -142,6 +144,52 @@ class _CollaboratorsTabState extends State<CollaboratorsTab> {
                       setState(() => _role = value);
                     }
                   },
+                ),
+                const SizedBox(height: 12),
+                Text('Search users', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _userSearchController,
+                  decoration: InputDecoration(
+                    hintText: 'Find users by name or email',
+                    prefixIcon: const Icon(Icons.search),
+                    suffixIcon: _userQuery.isEmpty
+                        ? null
+                        : IconButton(
+                            icon: const Icon(Icons.close),
+                            onPressed: () => _userSearchController.clear(),
+                          ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                if (_userQuery.length >= 2 && state.isSearching)
+                  const LinearProgressIndicator(minHeight: 2),
+                if (_userQuery.length >= 2 && !state.isSearching) ...[
+                  if (state.searchResults.isEmpty)
+                    Text(
+                      'No users found.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    )
+                  else
+                    ...state.searchResults.map(
+                      (user) => ListTile(
+                        leading: const CircleAvatar(child: Icon(Icons.person_outline)),
+                        title: Text(user.name?.isNotEmpty == true ? user.name! : user.email),
+                        subtitle: Text(user.email),
+                        trailing: TextButton(
+                          onPressed: () => _sendInviteToEmail(user.email),
+                          child: const Text('Invite'),
+                        ),
+                      ),
+                    ),
+                ],
+                const SizedBox(height: 12),
+                Text('Invite by email', style: Theme.of(context).textTheme.titleSmall),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: _emailController,
+                  decoration: const InputDecoration(labelText: 'Email'),
+                  keyboardType: TextInputType.emailAddress,
                 ),
                 const SizedBox(height: 8),
                 BlocBuilder<ConnectivityCubit, ConnectivityState>(
@@ -200,10 +248,28 @@ class _CollaboratorsTabState extends State<CollaboratorsTab> {
       );
       return;
     }
+    _sendInviteToEmail(email);
+    _emailController.clear();
+  }
+
+  void _sendInviteToEmail(String email) {
     context.read<CollaboratorsBloc>().add(
           InviteSent(tripId: widget.trip.id, email: email, role: _role),
         );
-    _emailController.clear();
+  }
+
+  void _onUserSearchChanged() {
+    final query = _userSearchController.text.trim();
+    setState(() => _userQuery = query);
+    _searchDebounce?.cancel();
+    _searchDebounce = Timer(const Duration(milliseconds: 350), () {
+      if (!mounted) {
+        return;
+      }
+      context.read<CollaboratorsBloc>().add(
+            CollaboratorsSearchRequested(tripId: widget.trip.id, query: query),
+          );
+    });
   }
 
   Future<void> _openAcceptInvite(BuildContext context) async {

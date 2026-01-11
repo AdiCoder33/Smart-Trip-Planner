@@ -48,3 +48,16 @@ class InviteRevoked extends CollaboratorsEvent {
   @override
   List<Object?> get props => [inviteId];
 }
+
+class CollaboratorsSearchRequested extends CollaboratorsEvent {
+  final String tripId;
+  final String query;
+
+  const CollaboratorsSearchRequested({
+    required this.tripId,
+    required this.query,
+  });
+
+  @override
+  List<Object?> get props => [tripId, query];
+}

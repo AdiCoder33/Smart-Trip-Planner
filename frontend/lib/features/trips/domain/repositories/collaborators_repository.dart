@@ -1,5 +1,6 @@
 import '../entities/trip_invite.dart';
 import '../entities/trip_member.dart';
+import '../entities/user_lookup.dart';
 
 abstract class CollaboratorsRepository {
   Future<List<TripMemberEntity>> getMembers(String tripId);
@@ -11,4 +12,5 @@ abstract class CollaboratorsRepository {
   });
   Future<TripMemberEntity> acceptInvite({required String token});
   Future<TripInviteEntity> revokeInvite({required String inviteId});
+  Future<List<UserLookupEntity>> searchUsers({required String tripId, required String query});
 }

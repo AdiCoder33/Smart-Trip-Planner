@@ -2,6 +2,7 @@ import 'package:dio/dio.dart';
 
 import '../models/trip_invite_model.dart';
 import '../models/trip_member_model.dart';
+import '../models/user_lookup_model.dart';
 
 class CollaboratorsRemoteDataSource {
   final Dio dio;
@@ -40,5 +41,16 @@ class CollaboratorsRemoteDataSource {
   Future<TripInviteModel> revokeInvite({required String inviteId}) async {
     final response = await dio.post('/api/invites/revoke', data: {'invite_id': inviteId});
     return TripInviteModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<List<UserLookupModel>> searchUsers({
+    required String tripId,
+    required String query,
+  }) async {
+    final response = await dio.get('/api/trips/$tripId/user-search', queryParameters: {
+      'q': query,
+    });
+    final data = response.data as List;
+    return data.map((item) => UserLookupModel.fromJson(item as Map<String, dynamic>)).toList();
   }
 }

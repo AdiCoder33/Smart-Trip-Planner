@@ -17,6 +17,7 @@ from .views import (
     TripChatMessagesView,
     TripMembersView,
     TripPollsView,
+    TripUserSearchView,
     TripViewSet,
 )
 
@@ -48,6 +49,7 @@ urlpatterns = [
     path("invites/accept", InviteAcceptView.as_view(), name="invite-accept"),
     path("invites/revoke", InviteRevokeView.as_view(), name="invite-revoke"),
     path("trips/<uuid:trip_id>/members", TripMembersView.as_view(), name="trip-members"),
+    path("trips/<uuid:trip_id>/user-search", TripUserSearchView.as_view(), name="trip-user-search"),
     path("trips/<uuid:trip_id>/polls", TripPollsView.as_view(), name="trip-polls"),
     path("polls/<uuid:poll_id>", PollDetailView.as_view(), name="poll-detail"),
     path("polls/<uuid:poll_id>/vote", PollVoteView.as_view(), name="poll-vote"),

@@ -5,9 +5,11 @@ import '../../../../core/connectivity/connectivity_service.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/trip_invite.dart';
 import '../../domain/entities/trip_member.dart';
+import '../../domain/entities/user_lookup.dart';
 import '../../domain/usecases/get_trip_invites.dart';
 import '../../domain/usecases/get_trip_members.dart';
 import '../../domain/usecases/revoke_invite.dart';
+import '../../domain/usecases/search_trip_users.dart';
 import '../../domain/usecases/send_trip_invite.dart';
 
 part 'collaborators_event.dart';
@@ -18,6 +20,7 @@ class CollaboratorsBloc extends Bloc<CollaboratorsEvent, CollaboratorsState> {
   final GetTripInvites getTripInvites;
   final SendTripInvite sendTripInvite;
   final RevokeInvite revokeInvite;
+  final SearchTripUsers searchTripUsers;
   final ConnectivityService connectivityService;
 
   CollaboratorsBloc({
@@ -25,16 +28,25 @@ class CollaboratorsBloc extends Bloc<CollaboratorsEvent, CollaboratorsState> {
     required this.getTripInvites,
     required this.sendTripInvite,
     required this.revokeInvite,
+    required this.searchTripUsers,
     required this.connectivityService,
   }) : super(const CollaboratorsState()) {
     on<CollaboratorsStarted>(_onStarted);
     on<CollaboratorsRefreshed>(_onRefreshed);
     on<InviteSent>(_onInviteSent);
     on<InviteRevoked>(_onInviteRevoked);
+    on<CollaboratorsSearchRequested>(_onSearchRequested);
   }
 
   Future<void> _onStarted(CollaboratorsStarted event, Emitter<CollaboratorsState> emit) async {
-    emit(state.copyWith(status: CollaboratorsStatus.loading, message: null, tripId: event.tripId));
+    emit(state.copyWith(
+      status: CollaboratorsStatus.loading,
+      message: null,
+      tripId: event.tripId,
+      searchResults: const [],
+      searchQuery: '',
+      isSearching: false,
+    ));
     try {
       final members = await getTripMembers(event.tripId);
       List<TripInviteEntity> invites = [];
@@ -91,7 +103,14 @@ class CollaboratorsBloc extends Bloc<CollaboratorsEvent, CollaboratorsState> {
         role: event.role,
       );
       final updated = [invite, ...state.invites];
-      emit(state.copyWith(invites: updated, message: 'Invite sent.'));
+      final updatedResults = state.searchResults
+          .where((user) => user.email.toLowerCase() != invite.email.toLowerCase())
+          .toList();
+      emit(state.copyWith(
+        invites: updated,
+        searchResults: updatedResults,
+        message: 'Invite sent.',
+      ));
     } catch (error) {
       final message = error is AppException ? error.message : 'Failed to send invite';
       emit(state.copyWith(message: message));
@@ -106,6 +125,48 @@ class CollaboratorsBloc extends Bloc<CollaboratorsEvent, CollaboratorsState> {
     } catch (error) {
       final message = error is AppException ? error.message : 'Failed to revoke invite';
       emit(state.copyWith(message: message));
+    }
+  }
+
+  Future<void> _onSearchRequested(
+    CollaboratorsSearchRequested event,
+    Emitter<CollaboratorsState> emit,
+  ) async {
+    final query = event.query.trim();
+    if (query.isEmpty) {
+      emit(state.copyWith(
+        searchResults: const [],
+        isSearching: false,
+        searchQuery: '',
+      ));
+      return;
+    }
+
+    if (query.length < 2) {
+      emit(state.copyWith(
+        searchResults: const [],
+        isSearching: false,
+        searchQuery: query,
+      ));
+      return;
+    }
+
+    final online = await connectivityService.isOnline();
+    if (!online) {
+      emit(state.copyWith(
+        isSearching: false,
+        message: 'You are offline. Search is unavailable.',
+      ));
+      return;
+    }
+
+    emit(state.copyWith(isSearching: true, searchQuery: query, message: null));
+    try {
+      final results = await searchTripUsers(tripId: event.tripId, query: query);
+      emit(state.copyWith(searchResults: results, isSearching: false));
+    } catch (error) {
+      final message = error is AppException ? error.message : 'Failed to search users';
+      emit(state.copyWith(isSearching: false, message: message));
     }
   }
 }
