@@ -58,109 +58,112 @@ class ProfileScreen extends StatelessWidget {
           ],
           child: BlocBuilder<TripsBloc, TripsState>(
             builder: (context, tripsState) {
-            final trips = tripsState.trips;
-            final completed = trips.where(_isCompleted).toList()
-              ..sort((a, b) => _endDateOrMin(b).compareTo(_endDateOrMin(a)));
-            final upcoming = trips.where((trip) => !_isCompleted(trip)).toList();
+              final trips = tripsState.trips;
+              final completed = trips.where(_isCompleted).toList()
+                ..sort((a, b) => _endDateOrMin(b).compareTo(_endDateOrMin(a)));
+              final upcoming = trips.where((trip) => !_isCompleted(trip)).toList();
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                _ProfileHeader(
-                  name: displayName,
-                  email: user?.email ?? 'Unknown',
-                ),
-                const SizedBox(height: 16),
-                _StatsRow(
-                  total: trips.length,
-                  completed: completed.length,
-                  upcoming: upcoming.length,
-                ),
-                const SizedBox(height: 24),
-                Text('Tour History', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 12),
-                if (completed.isEmpty)
-                  Text(
-                    'No completed tours yet.',
-                    style: Theme.of(context).textTheme.bodyMedium,
-                  )
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: completed.length,
-                    separatorBuilder: (_, __) => const Divider(height: 16),
-                    itemBuilder: (context, index) {
-                      final trip = completed[index];
-                      final subtitle = _buildTripSubtitle(trip);
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        title: Text(trip.title),
-                        subtitle: subtitle == null ? null : Text(subtitle),
-                        trailing: const Icon(Icons.check_circle, color: Colors.teal),
-                      );
-                    },
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  _ProfileHeader(
+                    name: displayName,
+                    email: user?.email ?? 'Unknown',
                   ),
-                const SizedBox(height: 24),
-                Text('Invites', style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: 12),
-                DefaultTabController(
-                  length: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const TabBar(
-                        tabs: [
-                          Tab(text: 'Sent'),
-                          Tab(text: 'Received'),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      SizedBox(
-                        height: 260,
-                        child: TabBarView(
-                          children: [
-                            _InvitesList<SentInvitesCubit, SentInvitesState>(
-                              emptyLabel: 'No sent invites yet.',
-                              loadingStatus: SentInvitesStatus.loading,
-                              errorStatus: SentInvitesStatus.error,
-                            ),
-                            _InvitesList<ReceivedInvitesCubit, ReceivedInvitesState>(
-                              emptyLabel: 'No received invites yet.',
-                              loadingStatus: ReceivedInvitesStatus.loading,
-                              errorStatus: ReceivedInvitesStatus.error,
-                              onAccept: (invite) async {
-                                final accepted =
-                                    await context.read<ReceivedInvitesCubit>().acceptInvite(invite.id);
-                                if (accepted) {
-                                  context.read<TripsBloc>().add(const TripsRefreshed());
-                                }
-                              },
-                              onDecline: (invite) async {
-                                await context.read<ReceivedInvitesCubit>().declineInviteById(invite.id);
-                              },
-                            ),
+                  const SizedBox(height: 16),
+                  _StatsRow(
+                    total: trips.length,
+                    completed: completed.length,
+                    upcoming: upcoming.length,
+                  ),
+                  const SizedBox(height: 24),
+                  Text('Tour History', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  if (completed.isEmpty)
+                    Text(
+                      'No completed tours yet.',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    )
+                  else
+                    ListView.separated(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: completed.length,
+                      separatorBuilder: (_, __) => const Divider(height: 16),
+                      itemBuilder: (context, index) {
+                        final trip = completed[index];
+                        final subtitle = _buildTripSubtitle(trip);
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: Text(trip.title),
+                          subtitle: subtitle == null ? null : Text(subtitle),
+                          trailing: const Icon(Icons.check_circle, color: Colors.teal),
+                        );
+                      },
+                    ),
+                  const SizedBox(height: 24),
+                  Text('Invites', style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 12),
+                  DefaultTabController(
+                    length: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const TabBar(
+                          tabs: [
+                            Tab(text: 'Sent'),
+                            Tab(text: 'Received'),
                           ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 260,
+                          child: TabBarView(
+                            children: [
+                              _InvitesList<SentInvitesCubit, SentInvitesState>(
+                                emptyLabel: 'No sent invites yet.',
+                                loadingStatus: SentInvitesStatus.loading,
+                                errorStatus: SentInvitesStatus.error,
+                              ),
+                              _InvitesList<ReceivedInvitesCubit, ReceivedInvitesState>(
+                                emptyLabel: 'No received invites yet.',
+                                loadingStatus: ReceivedInvitesStatus.loading,
+                                errorStatus: ReceivedInvitesStatus.error,
+                                onAccept: (invite) async {
+                                  final accepted = await context
+                                      .read<ReceivedInvitesCubit>()
+                                      .acceptInvite(invite.id);
+                                  if (accepted) {
+                                    context.read<TripsBloc>().add(const TripsRefreshed());
+                                  }
+                                },
+                                onDecline: (invite) async {
+                                  await context
+                                      .read<ReceivedInvitesCubit>()
+                                      .declineInviteById(invite.id);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      context.read<AuthBloc>().add(const LogoutRequested());
-                      Navigator.of(context).popUntil((route) => route.isFirst);
-                    },
-                    icon: const Icon(Icons.logout),
-                    label: const Text('Logout'),
+                  const SizedBox(height: 24),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        context.read<AuthBloc>().add(const LogoutRequested());
+                        Navigator.of(context).popUntil((route) => route.isFirst);
+                      },
+                      icon: const Icon(Icons.logout),
+                      label: const Text('Logout'),
+                    ),
                   ),
-                ),
-              ],
-            );
-          },
+                ],
+              );
+            },
           ),
         ),
       ),
@@ -389,19 +392,27 @@ class _InvitesList<C extends Cubit<S>, S> extends StatelessWidget {
       return null;
     }
     return SizedBox(
-      width: 72,
+      width: 64,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
         children: [
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.redAccent),
+            icon: const Icon(Icons.close, color: Colors.redAccent, size: 18),
             onPressed: onDecline == null ? null : () => onDecline!(invite),
             tooltip: 'Decline',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+            visualDensity: VisualDensity.compact,
           ),
+          const SizedBox(width: 4),
           IconButton(
-            icon: const Icon(Icons.check_circle, color: Colors.teal),
+            icon: const Icon(Icons.check_circle, color: Colors.teal, size: 18),
             onPressed: onAccept == null ? null : () => onAccept!(invite),
             tooltip: 'Accept',
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints.tightFor(width: 28, height: 28),
+            visualDensity: VisualDensity.compact,
           ),
         ],
       ),
