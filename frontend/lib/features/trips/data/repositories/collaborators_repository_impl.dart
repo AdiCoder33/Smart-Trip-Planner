@@ -51,9 +51,27 @@ class CollaboratorsRepositoryImpl implements CollaboratorsRepository {
   }
 
   @override
+  Future<TripInviteEntity> acceptInviteById({required String inviteId}) async {
+    try {
+      return await remoteDataSource.acceptInviteById(inviteId: inviteId);
+    } catch (error) {
+      throw mapDioError(error);
+    }
+  }
+
+  @override
   Future<TripInviteEntity> revokeInvite({required String inviteId}) async {
     try {
       return await remoteDataSource.revokeInvite(inviteId: inviteId);
+    } catch (error) {
+      throw mapDioError(error);
+    }
+  }
+
+  @override
+  Future<TripInviteEntity> declineInvite({required String inviteId}) async {
+    try {
+      return await remoteDataSource.declineInvite(inviteId: inviteId);
     } catch (error) {
       throw mapDioError(error);
     }

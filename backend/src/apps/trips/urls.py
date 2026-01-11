@@ -4,6 +4,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     TripChatKeyView,
     InviteAcceptView,
+    InviteAcceptByIdView,
+    InviteDeclineView,
     InviteRevokeView,
     ItineraryItemDetailView,
     PollDetailView,
@@ -49,6 +51,8 @@ urlpatterns = [
         name="trip-expenses-summary",
     ),
     path("invites/accept", InviteAcceptView.as_view(), name="invite-accept"),
+    path("invites/accept-by-id", InviteAcceptByIdView.as_view(), name="invite-accept-by-id"),
+    path("invites/decline", InviteDeclineView.as_view(), name="invite-decline"),
     path("invites/revoke", InviteRevokeView.as_view(), name="invite-revoke"),
     path("invites/sent", SentInvitesView.as_view(), name="invites-sent"),
     path("invites/received", ReceivedInvitesView.as_view(), name="invites-received"),

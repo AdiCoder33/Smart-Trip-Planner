@@ -43,6 +43,16 @@ class CollaboratorsRemoteDataSource {
     return TripInviteModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<TripInviteModel> acceptInviteById({required String inviteId}) async {
+    final response = await dio.post('/api/invites/accept-by-id', data: {'invite_id': inviteId});
+    return TripInviteModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<TripInviteModel> declineInvite({required String inviteId}) async {
+    final response = await dio.post('/api/invites/decline', data: {'invite_id': inviteId});
+    return TripInviteModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<List<TripInviteModel>> fetchSentInvites() async {
     final response = await dio.get('/api/invites/sent');
     final data = response.data as List;

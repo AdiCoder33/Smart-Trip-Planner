@@ -81,6 +81,10 @@ class InviteRevokeSerializer(serializers.Serializer):
     invite_id = serializers.UUIDField()
 
 
+class InviteIdSerializer(serializers.Serializer):
+    invite_id = serializers.UUIDField()
+
+
 class TripInfoSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trip

@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../bloc/auth_bloc.dart';
 import '../../../trips/domain/entities/trip.dart';
 import '../../../trips/domain/entities/trip_invite.dart';
+import '../../../trips/domain/usecases/accept_invite_by_id.dart';
+import '../../../trips/domain/usecases/decline_invite.dart';
 import '../../../trips/domain/usecases/get_received_invites.dart';
 import '../../../trips/domain/usecases/get_sent_invites.dart';
 import '../../../trips/presentation/bloc/received_invites_cubit.dart';
@@ -36,11 +38,26 @@ class ProfileScreen extends StatelessWidget {
           BlocProvider(
             create: (_) => ReceivedInvitesCubit(
               getReceivedInvites: GetReceivedInvites(collaboratorsRepository),
+              acceptInviteById: AcceptInviteById(collaboratorsRepository),
+              declineInvite: DeclineInvite(collaboratorsRepository),
             )..load(),
           ),
         ],
-        child: BlocBuilder<TripsBloc, TripsState>(
-          builder: (context, tripsState) {
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<ReceivedInvitesCubit, ReceivedInvitesState>(
+              listenWhen: (prev, next) => prev.message != next.message && next.message != null,
+              listener: (context, state) {
+                if (state.message != null) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.message!)),
+                  );
+                }
+              },
+            ),
+          ],
+          child: BlocBuilder<TripsBloc, TripsState>(
+            builder: (context, tripsState) {
             final trips = tripsState.trips;
             final completed = trips.where(_isCompleted).toList()
               ..sort((a, b) => _endDateOrMin(b).compareTo(_endDateOrMin(a)));
@@ -112,6 +129,16 @@ class ProfileScreen extends StatelessWidget {
                               emptyLabel: 'No received invites yet.',
                               loadingStatus: ReceivedInvitesStatus.loading,
                               errorStatus: ReceivedInvitesStatus.error,
+                              onAccept: (invite) async {
+                                final accepted =
+                                    await context.read<ReceivedInvitesCubit>().acceptInvite(invite.id);
+                                if (accepted) {
+                                  context.read<TripsBloc>().add(const TripsRefreshed());
+                                }
+                              },
+                              onDecline: (invite) async {
+                                await context.read<ReceivedInvitesCubit>().declineInviteById(invite.id);
+                              },
                             ),
                           ],
                         ),
@@ -134,6 +161,7 @@ class ProfileScreen extends StatelessWidget {
               ],
             );
           },
+          ),
         ),
       ),
     );
@@ -294,11 +322,15 @@ class _InvitesList<C extends Cubit<S>, S> extends StatelessWidget {
   final String emptyLabel;
   final Object loadingStatus;
   final Object errorStatus;
+  final Future<void> Function(TripInviteEntity invite)? onAccept;
+  final Future<void> Function(TripInviteEntity invite)? onDecline;
 
   const _InvitesList({
     required this.emptyLabel,
     required this.loadingStatus,
     required this.errorStatus,
+    this.onAccept,
+    this.onDecline,
   });
 
   @override
@@ -340,11 +372,39 @@ class _InvitesList<C extends Cubit<S>, S> extends StatelessWidget {
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.mail_outline),
               title: Text(tripTitle),
-              subtitle: Text(subtitleParts.join(' • ')),
+              subtitle: Text(subtitleParts.join(' - ')),
+              trailing: _buildActions(invite),
             );
           },
         );
       },
+    );
+  }
+
+  Widget? _buildActions(TripInviteEntity invite) {
+    if (onAccept == null && onDecline == null) {
+      return null;
+    }
+    if (invite.status != 'pending') {
+      return null;
+    }
+    return SizedBox(
+      width: 72,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.close, color: Colors.redAccent),
+            onPressed: onDecline == null ? null : () => onDecline!(invite),
+            tooltip: 'Decline',
+          ),
+          IconButton(
+            icon: const Icon(Icons.check_circle, color: Colors.teal),
+            onPressed: onAccept == null ? null : () => onAccept!(invite),
+            tooltip: 'Accept',
+          ),
+        ],
+      ),
     );
   }
 }

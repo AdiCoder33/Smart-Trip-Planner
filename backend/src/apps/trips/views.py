@@ -44,6 +44,7 @@ from .serializers import (
     ExpenseSerializer,
     ExpenseSummarySerializer,
     InviteAcceptSerializer,
+    InviteIdSerializer,
     InviteRevokeSerializer,
     ItineraryItemSerializer,
     ItineraryReorderSerializer,
@@ -669,6 +670,35 @@ class InviteAcceptView(APIView):
         return Response(TripMemberSerializer(member).data)
 
 
+class InviteAcceptByIdView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = InviteIdSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invite = get_object_or_404(TripInvite, id=serializer.validated_data["invite_id"])
+
+        if invite.status != InviteStatus.PENDING:
+            raise ValidationError("Invite is no longer active.")
+
+        if invite.is_expired():
+            invite.status = InviteStatus.EXPIRED
+            invite.save(update_fields=["status"])
+            raise ValidationError("Invite has expired.")
+
+        if request.user.email.lower() != invite.email.lower():
+            raise PermissionDenied("Invite email does not match your account.")
+
+        TripMember.objects.get_or_create(
+            trip=invite.trip,
+            user=request.user,
+            defaults={"role": invite.role, "status": TripStatus.ACTIVE},
+        )
+        invite.status = InviteStatus.ACCEPTED
+        invite.save(update_fields=["status"])
+        return Response(TripInviteSentSerializer(invite).data)
+
+
 class InviteRevokeView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -684,6 +714,30 @@ class InviteRevokeView(APIView):
         invite.status = InviteStatus.REVOKED
         invite.save(update_fields=["status"])
         return Response(TripInviteSerializer(invite).data)
+
+
+class InviteDeclineView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        serializer = InviteIdSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        invite = get_object_or_404(TripInvite, id=serializer.validated_data["invite_id"])
+
+        if invite.status != InviteStatus.PENDING:
+            raise ValidationError("Invite is no longer active.")
+
+        if invite.is_expired():
+            invite.status = InviteStatus.EXPIRED
+            invite.save(update_fields=["status"])
+            raise ValidationError("Invite has expired.")
+
+        if request.user.email.lower() != invite.email.lower():
+            raise PermissionDenied("Invite email does not match your account.")
+
+        invite.status = InviteStatus.REVOKED
+        invite.save(update_fields=["status"])
+        return Response(TripInviteSentSerializer(invite).data)
 
 
 class SentInvitesView(APIView):
