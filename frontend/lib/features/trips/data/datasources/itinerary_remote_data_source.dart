@@ -37,7 +37,11 @@ class ItineraryRemoteDataSource {
     return ItineraryItemModel.fromJson(response.data as Map<String, dynamic>, tripId: tripId);
   }
 
-  Future<void> deleteItem(String itemId) async {
+  Future<void> deleteItem(String itemId, {String? tripId}) async {
+    if (tripId != null && tripId.isNotEmpty) {
+      await dio.delete('/api/trips/$tripId/itinerary/$itemId');
+      return;
+    }
     await dio.delete('/api/itinerary/$itemId');
   }
 

@@ -36,6 +36,11 @@ urlpatterns = [
         TripItineraryReorderView.as_view(),
         name="trip-itinerary-reorder",
     ),
+    path(
+        "trips/<uuid:trip_id>/itinerary/<uuid:item_id>",
+        ItineraryItemDetailView.as_view(),
+        name="trip-itinerary-item-detail",
+    ),
     path("itinerary/<uuid:item_id>", ItineraryItemDetailView.as_view(), name="itinerary-item-detail"),
     path("trips/<uuid:trip_id>/invites", TripInvitesView.as_view(), name="trip-invites"),
     path(

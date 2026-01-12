@@ -22,7 +22,10 @@ abstract class ItineraryRepository {
     String? endTime,
     DateTime? date,
   });
-  Future<void> deleteItem(String itemId);
+  Future<void> deleteItem({
+    required String itemId,
+    required String tripId,
+  });
   Future<List<ItineraryItemEntity>> reorderItems({
     required String tripId,
     required List<Map<String, dynamic>> items,

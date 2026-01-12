@@ -75,11 +75,12 @@ class ItineraryItemUpdated extends ItineraryEvent {
 
 class ItineraryItemDeleted extends ItineraryEvent {
   final String itemId;
+  final String tripId;
 
-  const ItineraryItemDeleted({required this.itemId});
+  const ItineraryItemDeleted({required this.itemId, required this.tripId});
 
   @override
-  List<Object?> get props => [itemId];
+  List<Object?> get props => [itemId, tripId];
 }
 
 class ItineraryReordered extends ItineraryEvent {

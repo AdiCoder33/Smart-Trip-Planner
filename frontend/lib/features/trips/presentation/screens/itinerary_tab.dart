@@ -182,7 +182,9 @@ class ItineraryTab extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              context.read<ItineraryBloc>().add(ItineraryItemDeleted(itemId: item.id));
+              context.read<ItineraryBloc>().add(
+                    ItineraryItemDeleted(itemId: item.id, tripId: trip.id),
+                  );
             },
             child: const Text('Delete'),
           ),

@@ -93,9 +93,12 @@ class ItineraryRepositoryImpl implements ItineraryRepository {
   }
 
   @override
-  Future<void> deleteItem(String itemId) async {
+  Future<void> deleteItem({
+    required String itemId,
+    required String tripId,
+  }) async {
     try {
-      await remoteDataSource.deleteItem(itemId);
+      await remoteDataSource.deleteItem(itemId, tripId: tripId);
       await localDataSource.deleteItem(itemId);
     } catch (error) {
       throw mapDioError(error);

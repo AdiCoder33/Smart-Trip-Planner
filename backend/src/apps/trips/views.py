@@ -617,8 +617,13 @@ class TripItineraryView(APIView):
 class ItineraryItemDetailView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
-    def patch(self, request, item_id):
-        item = get_object_or_404(ItineraryItem, id=item_id)
+    def _get_item(self, item_id, trip_id=None):
+        if trip_id is None:
+            return get_object_or_404(ItineraryItem, id=item_id)
+        return get_object_or_404(ItineraryItem, id=item_id, trip_id=trip_id)
+
+    def patch(self, request, item_id, trip_id=None):
+        item = self._get_item(item_id, trip_id)
         member = _require_member(request, item.trip)
         if not is_editor_or_owner(member):
             raise PermissionDenied("Insufficient permissions.")
@@ -628,8 +633,8 @@ class ItineraryItemDetailView(APIView):
         serializer.save()
         return Response(serializer.data)
 
-    def delete(self, request, item_id):
-        item = get_object_or_404(ItineraryItem, id=item_id)
+    def delete(self, request, item_id, trip_id=None):
+        item = self._get_item(item_id, trip_id)
         member = _require_member(request, item.trip)
         if not is_editor_or_owner(member):
             raise PermissionDenied("Insufficient permissions.")

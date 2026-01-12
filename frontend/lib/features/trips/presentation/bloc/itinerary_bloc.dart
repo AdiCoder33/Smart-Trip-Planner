@@ -266,14 +266,14 @@ class ItineraryBloc extends Bloc<ItineraryEvent, ItineraryState> {
       await syncQueue.enqueue(
         PendingAction.create(
           type: PendingActionType.deleteItinerary,
-          payload: {'item_id': event.itemId},
+          payload: {'item_id': event.itemId, 'trip_id': event.tripId},
         ),
       );
       return;
     }
 
     try {
-      await deleteItineraryItem(event.itemId);
+      await deleteItineraryItem(itemId: event.itemId, tripId: event.tripId);
     } catch (error) {
       final message = error is AppException ? error.message : 'Failed to delete item';
       if (removedItem.id.isNotEmpty) {

@@ -5,7 +5,10 @@ class DeleteItineraryItem {
 
   const DeleteItineraryItem(this.repository);
 
-  Future<void> call(String itemId) {
-    return repository.deleteItem(itemId);
+  Future<void> call({
+    required String itemId,
+    required String tripId,
+  }) {
+    return repository.deleteItem(itemId: itemId, tripId: tripId);
   }
 }

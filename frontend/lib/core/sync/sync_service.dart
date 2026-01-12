@@ -97,8 +97,10 @@ class SyncService {
   }
 
   Future<void> _handleDeleteItinerary(PendingAction action) async {
-    final itemId = action.payload['item_id'] as String;
-    await itineraryRemote.deleteItem(itemId);
+    final payload = action.payload;
+    final itemId = payload['item_id'] as String;
+    final tripId = payload['trip_id'] as String?;
+    await itineraryRemote.deleteItem(itemId, tripId: tripId);
     await itineraryLocal.deleteItem(itemId);
   }
 
