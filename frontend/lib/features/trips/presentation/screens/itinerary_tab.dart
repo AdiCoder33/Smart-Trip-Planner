@@ -172,19 +172,21 @@ class ItineraryTab extends StatelessWidget {
   }
 
   void _confirmDelete(BuildContext context, ItineraryItemEntity item) {
+    final bloc = context.read<ItineraryBloc>();
     showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
+      builder: (dialogContext) => AlertDialog(
         title: const Text('Delete item'),
         content: const Text('This action cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
-              Navigator.pop(context);
-              context.read<ItineraryBloc>().add(
-                    ItineraryItemDeleted(itemId: item.id, tripId: trip.id),
-                  );
+              Navigator.pop(dialogContext);
+              bloc.add(ItineraryItemDeleted(itemId: item.id, tripId: trip.id));
             },
             child: const Text('Delete'),
           ),
