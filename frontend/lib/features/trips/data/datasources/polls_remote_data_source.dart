@@ -35,4 +35,21 @@ class PollsRemoteDataSource {
     final response = await dio.post('/api/polls/$pollId/vote', data: {'option_id': optionId});
     return PollModel.fromJson(response.data as Map<String, dynamic>, tripId: tripId);
   }
+
+  Future<PollModel> updatePoll({
+    required String pollId,
+    required String tripId,
+    required String question,
+    required List<String> options,
+  }) async {
+    final response = await dio.patch('/api/polls/$pollId', data: {
+      'question': question,
+      'options': options,
+    });
+    return PollModel.fromJson(response.data as Map<String, dynamic>, tripId: tripId);
+  }
+
+  Future<void> deletePoll({required String pollId}) async {
+    await dio.delete('/api/polls/$pollId');
+  }
 }

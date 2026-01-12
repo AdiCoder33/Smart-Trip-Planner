@@ -70,6 +70,37 @@ class PollsRepositoryImpl implements PollsRepository {
   }
 
   @override
+  Future<PollEntity> updatePoll({
+    required String pollId,
+    required String tripId,
+    required String question,
+    required List<String> options,
+  }) async {
+    try {
+      final poll = await remoteDataSource.updatePoll(
+        pollId: pollId,
+        tripId: tripId,
+        question: question,
+        options: options,
+      );
+      await localDataSource.upsertPoll(poll);
+      return poll;
+    } catch (error) {
+      throw mapDioError(error);
+    }
+  }
+
+  @override
+  Future<void> deletePoll({required String pollId}) async {
+    try {
+      await remoteDataSource.deletePoll(pollId: pollId);
+      await localDataSource.deletePoll(pollId);
+    } catch (error) {
+      throw mapDioError(error);
+    }
+  }
+
+  @override
   Future<void> cacheLocalPolls(String tripId, List<PollEntity> polls) async {
     final models = polls.map(_toModel).toList();
     await localDataSource.cachePolls(tripId, models);

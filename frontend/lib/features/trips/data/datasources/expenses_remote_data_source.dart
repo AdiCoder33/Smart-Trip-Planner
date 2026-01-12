@@ -33,6 +33,27 @@ class ExpensesRemoteDataSource {
     return ExpenseModel.fromJson(response.data as Map<String, dynamic>);
   }
 
+  Future<ExpenseModel> updateExpense({
+    required String expenseId,
+    required String title,
+    required double amount,
+    String currency = 'USD',
+  }) async {
+    final response = await dio.patch(
+      '/api/expenses/$expenseId',
+      data: {
+        'title': title,
+        'amount': amount.toStringAsFixed(2),
+        'currency': currency,
+      },
+    );
+    return ExpenseModel.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> deleteExpense(String expenseId) async {
+    await dio.delete('/api/expenses/$expenseId');
+  }
+
   Future<List<ExpenseSummaryEntity>> fetchSummary(String tripId) async {
     final response = await dio.get('/api/trips/$tripId/expenses/summary');
     final data = response.data as List;

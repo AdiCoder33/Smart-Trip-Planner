@@ -391,24 +391,21 @@ class _InvitesList<C extends Cubit<S>, S> extends StatelessWidget {
     if (invite.status != 'pending') {
       return null;
     }
-    return SizedBox(
-      width: 48,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          _InviteActionIcon(
-            icon: Icons.close,
-            color: Colors.redAccent,
-            onTap: onDecline == null ? null : () => onDecline!(invite),
-          ),
-          const SizedBox(width: 4),
-          _InviteActionIcon(
-            icon: Icons.check_circle,
-            color: Colors.teal,
-            onTap: onAccept == null ? null : () => onAccept!(invite),
-          ),
-        ],
-      ),
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _InviteActionIcon(
+          icon: Icons.close,
+          color: Colors.redAccent,
+          onTap: onDecline == null ? null : () => onDecline!(invite),
+        ),
+        const SizedBox(width: 4),
+        _InviteActionIcon(
+          icon: Icons.check_circle,
+          color: Colors.teal,
+          onTap: onAccept == null ? null : () => onAccept!(invite),
+        ),
+      ],
     );
   }
 }

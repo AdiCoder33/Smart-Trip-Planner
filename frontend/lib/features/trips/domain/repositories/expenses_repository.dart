@@ -10,6 +10,14 @@ abstract class ExpensesRepository {
     required double amount,
     String currency,
   });
+  Future<ExpenseEntity> updateExpense({
+    required String tripId,
+    required String expenseId,
+    required String title,
+    required double amount,
+    String currency,
+  });
+  Future<void> deleteExpense({required String expenseId});
   Future<List<ExpenseSummaryEntity>> getSummary(String tripId);
   Future<void> cacheExpenses(String tripId, List<ExpenseEntity> expenses);
 }

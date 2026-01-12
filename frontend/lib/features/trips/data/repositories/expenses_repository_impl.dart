@@ -44,6 +44,30 @@ class ExpensesRepositoryImpl implements ExpensesRepository {
   }
 
   @override
+  Future<ExpenseEntity> updateExpense({
+    required String tripId,
+    required String expenseId,
+    required String title,
+    required double amount,
+    String currency = 'USD',
+  }) async {
+    final expense = await remoteDataSource.updateExpense(
+      expenseId: expenseId,
+      title: title,
+      amount: amount,
+      currency: currency,
+    );
+    await localDataSource.upsertExpense(expense);
+    return expense;
+  }
+
+  @override
+  Future<void> deleteExpense({required String expenseId}) async {
+    await remoteDataSource.deleteExpense(expenseId);
+    await localDataSource.deleteExpense(expenseId);
+  }
+
+  @override
   Future<List<ExpenseSummaryEntity>> getSummary(String tripId) {
     return remoteDataSource.fetchSummary(tripId);
   }

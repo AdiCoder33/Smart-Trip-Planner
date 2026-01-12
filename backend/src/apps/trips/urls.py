@@ -13,6 +13,7 @@ from .views import (
     ReceivedInvitesView,
     SentInvitesView,
     TripCalendarExportView,
+    ExpenseDetailView,
     TripExpensesView,
     TripExpenseSummaryView,
     TripInvitesView,
@@ -45,6 +46,7 @@ urlpatterns = [
     path("trips/<uuid:trip_id>/chat/key", TripChatKeyView.as_view(), name="trip-chat-key"),
     path("trips/<uuid:trip_id>/calendar", TripCalendarExportView.as_view(), name="trip-calendar-export"),
     path("trips/<uuid:trip_id>/expenses", TripExpensesView.as_view(), name="trip-expenses"),
+    path("expenses/<uuid:expense_id>", ExpenseDetailView.as_view(), name="expense-detail"),
     path(
         "trips/<uuid:trip_id>/expenses/summary",
         TripExpenseSummaryView.as_view(),

@@ -200,6 +200,20 @@ class ExpenseCreateSerializer(serializers.Serializer):
     splits = ExpenseSplitInputSerializer(many=True, required=False)
 
 
+class ExpenseUpdateSerializer(serializers.Serializer):
+    title = serializers.CharField(required=False)
+    amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
+    currency = serializers.CharField(max_length=3, required=False)
+    paid_by = serializers.UUIDField(required=False)
+    participant_ids = serializers.ListField(child=serializers.UUIDField(), required=False)
+    splits = ExpenseSplitInputSerializer(many=True, required=False)
+
+    def validate(self, attrs):
+        if not attrs:
+            raise serializers.ValidationError("No fields to update.")
+        return attrs
+
+
 class ExpenseSummarySerializer(serializers.Serializer):
     user = MemberUserSerializer()
     paid = serializers.DecimalField(max_digits=10, decimal_places=2)
@@ -249,3 +263,9 @@ class PollCreateSerializer(serializers.Serializer):
 
 class PollVoteSerializer(serializers.Serializer):
     option_id = serializers.UUIDField()
+
+
+class PollUpdateSerializer(serializers.Serializer):
+    question = serializers.CharField(required=False)
+    options = serializers.ListField(child=serializers.CharField(), required=False)
+    is_active = serializers.BooleanField(required=False)

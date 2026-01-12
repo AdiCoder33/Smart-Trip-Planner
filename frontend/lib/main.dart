@@ -8,6 +8,7 @@ import 'core/connectivity/connectivity_cubit.dart';
 import 'core/connectivity/connectivity_service.dart';
 import 'core/crypto/chat_crypto.dart';
 import 'core/network/dio_client.dart';
+import 'core/notifications/local_notifications_service.dart';
 import 'core/storage/chat_key_storage.dart';
 import 'core/storage/token_storage.dart';
 import 'core/sync/pending_action.dart';
@@ -71,6 +72,7 @@ Future<void> main() async {
 
   const secureStorage = FlutterSecureStorage();
   final connectivityService = ConnectivityService();
+  final notificationsService = LocalNotificationsService();
   final tokenStorage = TokenStorage(secureStorage);
   final chatKeyStorage = ChatKeyStorage(secureStorage);
   final chatCrypto = ChatCrypto();
@@ -129,6 +131,8 @@ Future<void> main() async {
     pollsLocal: pollsLocal,
   );
 
+  await notificationsService.init();
+
   runApp(SmartTripPlannerApp(
     tokenStorage: tokenStorage,
     authRepository: authRepository,
@@ -139,6 +143,7 @@ Future<void> main() async {
     expensesRepository: expensesRepository,
     chatRepository: chatRepository,
     connectivityService: connectivityService,
+    notificationsService: notificationsService,
     syncQueue: syncQueue,
     syncService: syncService,
   ));
@@ -154,6 +159,7 @@ class SmartTripPlannerApp extends StatelessWidget {
   final ExpensesRepositoryImpl expensesRepository;
   final ChatRepositoryImpl chatRepository;
   final ConnectivityService connectivityService;
+  final LocalNotificationsService notificationsService;
   final SyncQueue syncQueue;
   final SyncService syncService;
 
@@ -168,6 +174,7 @@ class SmartTripPlannerApp extends StatelessWidget {
     required this.expensesRepository,
     required this.chatRepository,
     required this.connectivityService,
+    required this.notificationsService,
     required this.syncQueue,
     required this.syncService,
   });
@@ -185,6 +192,7 @@ class SmartTripPlannerApp extends StatelessWidget {
         RepositoryProvider.value(value: expensesRepository),
         RepositoryProvider.value(value: chatRepository),
         RepositoryProvider.value(value: connectivityService),
+        RepositoryProvider.value(value: notificationsService),
         RepositoryProvider.value(value: syncQueue),
         RepositoryProvider.value(value: syncService),
       ],

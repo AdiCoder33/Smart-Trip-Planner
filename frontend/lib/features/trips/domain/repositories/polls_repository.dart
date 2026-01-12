@@ -13,6 +13,13 @@ abstract class PollsRepository {
     required String optionId,
     required String tripId,
   });
+  Future<PollEntity> updatePoll({
+    required String pollId,
+    required String tripId,
+    required String question,
+    required List<String> options,
+  });
+  Future<void> deletePoll({required String pollId});
   Future<void> cacheLocalPolls(String tripId, List<PollEntity> polls);
   Future<void> upsertLocalPoll(PollEntity poll);
   Future<void> deleteLocalPoll(String pollId);

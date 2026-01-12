@@ -121,6 +121,7 @@ class SyncService {
       question: payload['question'] as String,
       options: (payload['options'] as List).cast<String>(),
     );
+    await queue.remapPollVote(tempId, poll.id);
     await pollsLocal.deletePoll(tempId);
     await pollsLocal.upsertPoll(poll);
   }
@@ -130,6 +131,9 @@ class SyncService {
     final pollId = payload['poll_id'] as String;
     final optionId = payload['option_id'] as String;
     final tripId = payload['trip_id'] as String;
+    if (pollId.startsWith('temp-')) {
+      return;
+    }
     final poll = await pollsRemote.vote(pollId: pollId, optionId: optionId, tripId: tripId);
     await pollsLocal.upsertPoll(poll);
   }

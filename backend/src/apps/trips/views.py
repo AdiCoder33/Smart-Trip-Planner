@@ -41,6 +41,7 @@ from .permissions import get_trip_member, is_editor_or_owner, is_owner, TripPerm
 from .serializers import (
     ChatMessageSerializer,
     ExpenseCreateSerializer,
+    ExpenseUpdateSerializer,
     ExpenseSerializer,
     ExpenseSummarySerializer,
     InviteAcceptSerializer,
@@ -50,6 +51,7 @@ from .serializers import (
     ItineraryReorderSerializer,
     PollCreateSerializer,
     PollSerializer,
+    PollUpdateSerializer,
     PollVoteSerializer,
     TripInviteCreateSerializer,
     TripInviteSerializer,
@@ -439,6 +441,100 @@ class TripExpensesView(APIView):
             .get()
         )
         return Response(ExpenseSerializer(expense).data, status=status.HTTP_201_CREATED)
+
+
+class ExpenseDetailView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def patch(self, request, expense_id):
+        expense = get_object_or_404(Expense, id=expense_id)
+        member = _require_member(request, expense.trip)
+        if not is_editor_or_owner(member):
+            raise PermissionDenied("Insufficient permissions.")
+
+        serializer = ExpenseUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+
+        amount = data.get("amount", expense.amount)
+        currency = data.get("currency", expense.currency)
+        title = data.get("title", expense.title)
+        if "title" in data and not title.strip():
+            raise ValidationError("Title is required.")
+        paid_by_id = data.get("paid_by", expense.paid_by_id)
+
+        participant_ids = data.get("participant_ids")
+        splits_data = data.get("splits")
+
+        if splits_data:
+            participant_ids = [split["user_id"] for split in splits_data]
+
+        existing_participants = list(
+            ExpenseSplit.objects.filter(expense=expense).values_list("user_id", flat=True)
+        )
+        members = TripMember.objects.filter(
+            trip=expense.trip,
+            status=TripStatus.ACTIVE,
+        ).select_related("user")
+
+        member_ids = {member.user_id for member in members}
+        if participant_ids:
+            missing = [pid for pid in participant_ids if pid not in member_ids]
+            if missing:
+                raise ValidationError("Participants must be trip members.")
+        else:
+            participant_ids = existing_participants or list(member_ids)
+
+        if paid_by_id not in member_ids:
+            raise ValidationError("paid_by must be a trip member.")
+
+        with transaction.atomic():
+            expense.title = title.strip()
+            expense.amount = amount
+            expense.currency = currency.upper() if currency else expense.currency
+            expense.paid_by_id = paid_by_id
+            expense.save(update_fields=["title", "amount", "currency", "paid_by"])
+
+            ExpenseSplit.objects.filter(expense=expense).delete()
+
+            if splits_data:
+                total_split = sum((split["amount"] for split in splits_data), Decimal("0"))
+                if total_split != amount:
+                    raise ValidationError("Split amounts must equal total amount.")
+                splits = [
+                    ExpenseSplit(expense=expense, user_id=split["user_id"], amount=split["amount"])
+                    for split in splits_data
+                ]
+            else:
+                count = len(participant_ids)
+                if count == 0:
+                    raise ValidationError("Participants required.")
+                quant = Decimal("0.01")
+                share = (amount / count).quantize(quant, rounding=ROUND_HALF_UP)
+                splits = []
+                for idx, user_id in enumerate(participant_ids):
+                    split_amount = share
+                    if idx == count - 1:
+                        split_amount = amount - share * (count - 1)
+                    splits.append(ExpenseSplit(expense=expense, user_id=user_id, amount=split_amount))
+
+            ExpenseSplit.objects.bulk_create(splits)
+
+        expense = (
+            Expense.objects.filter(id=expense.id)
+            .select_related("paid_by", "created_by")
+            .prefetch_related("splits__user")
+            .get()
+        )
+        return Response(ExpenseSerializer(expense).data)
+
+    def delete(self, request, expense_id):
+        expense = get_object_or_404(Expense, id=expense_id)
+        member = _require_member(request, expense.trip)
+        if not is_editor_or_owner(member):
+            raise PermissionDenied("Insufficient permissions.")
+        expense.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class TripExpenseSummaryView(APIView):
@@ -841,15 +937,31 @@ class PollDetailView(APIView):
         if not is_editor_or_owner(member):
             raise PermissionDenied("Insufficient permissions.")
 
-        is_active = request.data.get("is_active")
-        if is_active is None:
-            raise ValidationError("is_active is required.")
-        if isinstance(is_active, str):
-            is_active = is_active.lower() == "true"
-        if not isinstance(is_active, bool):
-            raise ValidationError("is_active must be a boolean.")
-        poll.is_active = is_active
-        poll.save(update_fields=["is_active", "updated_at"])
+        serializer = PollUpdateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if not data:
+            raise ValidationError("No fields to update.")
+
+        question = data.get("question")
+        if question is not None:
+            poll.question = question.strip()
+
+        if "is_active" in data:
+            poll.is_active = data["is_active"]
+
+        options = data.get("options")
+        with transaction.atomic():
+            poll.save(update_fields=["question", "is_active", "updated_at"])
+            if options is not None:
+                cleaned = [option.strip() for option in options if option.strip()]
+                if len(cleaned) < 2:
+                    raise ValidationError("At least two options are required.")
+                poll.options.all().delete()
+                PollOption.objects.bulk_create(
+                    [PollOption(poll=poll, text=option) for option in cleaned]
+                )
+
         options_qs = PollOption.objects.annotate(vote_count=Count("votes"))
         poll = (
             Poll.objects.filter(id=poll_id)
@@ -864,6 +976,14 @@ class PollDetailView(APIView):
             .first()
         )
         return Response(PollSerializer(poll, context={"request": request}).data)
+
+    def delete(self, request, poll_id):
+        poll = get_object_or_404(Poll, id=poll_id)
+        member = _require_member(request, poll.trip)
+        if not is_editor_or_owner(member):
+            raise PermissionDenied("Insufficient permissions.")
+        poll.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class PollVoteView(APIView):

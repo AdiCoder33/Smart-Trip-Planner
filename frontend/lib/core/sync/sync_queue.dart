@@ -21,6 +21,25 @@ class SyncQueue {
     await box.delete(id);
   }
 
+  Future<void> remapPollVote(String tempPollId, String pollId) async {
+    final entries = box.toMap();
+    for (final entry in entries.entries) {
+      final action = entry.value;
+      if (action.type == PendingActionType.votePoll &&
+          action.payload['poll_id'] == tempPollId) {
+        final updatedPayload = Map<String, dynamic>.from(action.payload);
+        updatedPayload['poll_id'] = pollId;
+        final updated = PendingAction(
+          id: action.id,
+          type: action.type,
+          payload: updatedPayload,
+          createdAt: action.createdAt,
+        );
+        await box.put(action.id, updated);
+      }
+    }
+  }
+
   Future<void> clear() async {
     await box.clear();
   }

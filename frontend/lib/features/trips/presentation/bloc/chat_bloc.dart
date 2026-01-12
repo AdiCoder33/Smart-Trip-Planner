@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/connectivity/connectivity_service.dart';
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/notifications/local_notifications_service.dart';
 import '../../../../core/sync/pending_action.dart';
 import '../../../../core/sync/sync_queue.dart';
 import '../../domain/entities/chat_message.dart';
@@ -28,6 +29,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final UpsertLocalChatMessage upsertLocalChatMessage;
   final ChatRepository chatRepository;
   final ConnectivityService connectivityService;
+  final LocalNotificationsService notificationsService;
+  final String? currentUserId;
+  final String? tripTitle;
   final SyncQueue syncQueue;
   final Uuid _uuid;
   StreamSubscription<ChatSocketEvent>? _socketSubscription;
@@ -41,6 +45,9 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     required this.upsertLocalChatMessage,
     required this.chatRepository,
     required this.connectivityService,
+    required this.notificationsService,
+    this.currentUserId,
+    this.tripTitle,
     required this.syncQueue,
     Uuid? uuid,
   })  : _uuid = uuid ?? const Uuid(),
@@ -149,6 +156,15 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
     final merged = _mergeIncoming(state.messages, event.message);
     emit(state.copyWith(messages: merged));
     await cacheChatMessages(event.message.tripId, merged);
+    if (currentUserId != null && event.message.senderId != currentUserId) {
+      final sender = event.message.senderName?.trim();
+      final title = tripTitle?.trim().isNotEmpty == true ? tripTitle!.trim() : 'Trip message';
+      final content = event.message.content.trim();
+      final body = content.isNotEmpty
+          ? (sender?.isNotEmpty == true ? '$sender: $content' : content)
+          : 'New message received';
+      await notificationsService.showChatNotification(title: title, body: body);
+    }
   }
 
   Future<void> _onConnectionChanged(

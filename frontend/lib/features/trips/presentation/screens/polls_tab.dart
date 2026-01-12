@@ -85,6 +85,8 @@ class PollsTab extends StatelessWidget {
                                 ),
                               );
                         },
+                        onEdit: () => _showEditPoll(context, poll),
+                        onDelete: () => _confirmDeletePoll(context, poll),
                       );
                     },
                   ),
@@ -102,6 +104,8 @@ class PollsTab extends StatelessWidget {
       context: context,
       isScrollControlled: true,
       builder: (_) => _PollFormSheet(
+        title: 'Create poll',
+        submitLabel: 'Create',
         onSubmit: (question, options) {
           context.read<PollsBloc>().add(
                 PollCreated(tripId: trip.id, question: question, options: options),
@@ -110,18 +114,84 @@ class PollsTab extends StatelessWidget {
       ),
     );
   }
+
+  void _showEditPoll(BuildContext context, PollEntity poll) {
+    if (poll.isPending || poll.id.startsWith('temp-')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Poll is still syncing. Please wait.')),
+      );
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _PollFormSheet(
+        title: 'Edit poll',
+        submitLabel: 'Save',
+        initialQuestion: poll.question,
+        initialOptions: poll.options.map((option) => option.text).toList(),
+        onSubmit: (question, options) {
+          context.read<PollsBloc>().add(
+                PollUpdated(
+                  tripId: trip.id,
+                  pollId: poll.id,
+                  question: question,
+                  options: options,
+                ),
+              );
+        },
+      ),
+    );
+  }
+
+  Future<void> _confirmDeletePoll(BuildContext context, PollEntity poll) async {
+    if (poll.isPending || poll.id.startsWith('temp-')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Poll is still syncing. Please wait.')),
+      );
+      return;
+    }
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Delete poll?'),
+        content: const Text('This will remove the poll for all collaborators.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      context.read<PollsBloc>().add(PollDeleted(tripId: trip.id, pollId: poll.id));
+    }
+  }
 }
 
 class _PollCard extends StatelessWidget {
   final PollEntity poll;
   final ValueChanged<String> onVote;
+  final VoidCallback onEdit;
+  final VoidCallback onDelete;
 
-  const _PollCard({required this.poll, required this.onVote});
+  const _PollCard({
+    required this.poll,
+    required this.onVote,
+    required this.onEdit,
+    required this.onDelete,
+  });
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final totalVotes = poll.options.fold<int>(0, (sum, option) => sum + option.voteCount);
+    final isLocked = poll.isPending || poll.id.startsWith('temp-');
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 8),
@@ -150,14 +220,24 @@ class _PollCard extends StatelessWidget {
                   style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
                 ),
               ),
+              IconButton(
+                onPressed: isLocked ? null : onEdit,
+                icon: const Icon(Icons.edit_outlined),
+                tooltip: 'Edit poll',
+              ),
+              IconButton(
+                onPressed: isLocked ? null : onDelete,
+                icon: const Icon(Icons.delete_outline),
+                tooltip: 'Delete poll',
+              ),
               if (!poll.isActive)
                 const _StatusChip(
                   label: 'Closed',
                   color: Colors.red,
                 ),
-              if (poll.isPending)
+              if (isLocked)
                 const _StatusChip(
-                  label: 'Pending',
+                  label: 'Syncing',
                   color: Colors.orange,
                 ),
             ],
@@ -166,7 +246,7 @@ class _PollCard extends StatelessWidget {
           ...poll.options.map((option) => _PollOptionTile(
                 option: option,
                 selectedId: poll.userVoteOptionId,
-                disabled: !poll.isActive || poll.isPending,
+                disabled: !poll.isActive || isLocked,
                 totalVotes: totalVotes,
                 onSelected: onVote,
               )),
@@ -294,8 +374,18 @@ class _StatusChip extends StatelessWidget {
 
 class _PollFormSheet extends StatefulWidget {
   final void Function(String question, List<String> options) onSubmit;
+  final String title;
+  final String submitLabel;
+  final String? initialQuestion;
+  final List<String>? initialOptions;
 
-  const _PollFormSheet({required this.onSubmit});
+  const _PollFormSheet({
+    required this.onSubmit,
+    this.title = 'Create poll',
+    this.submitLabel = 'Create',
+    this.initialQuestion,
+    this.initialOptions,
+  });
 
   @override
   State<_PollFormSheet> createState() => _PollFormSheetState();
@@ -303,11 +393,19 @@ class _PollFormSheet extends StatefulWidget {
 
 class _PollFormSheetState extends State<_PollFormSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _questionController = TextEditingController();
-  final List<TextEditingController> _optionControllers = [
-    TextEditingController(),
-    TextEditingController(),
-  ];
+  late final TextEditingController _questionController;
+  late final List<TextEditingController> _optionControllers;
+
+  @override
+  void initState() {
+    super.initState();
+    _questionController = TextEditingController(text: widget.initialQuestion ?? '');
+    final initialOptions = widget.initialOptions ?? ['', ''];
+    final normalized = initialOptions.length >= 2
+        ? initialOptions
+        : [...initialOptions, ...List.filled(2 - initialOptions.length, '')];
+    _optionControllers = normalized.map((option) => TextEditingController(text: option)).toList();
+  }
 
   @override
   void dispose() {
@@ -332,7 +430,7 @@ class _PollFormSheetState extends State<_PollFormSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Create poll', style: Theme.of(context).textTheme.titleLarge),
+            Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             TextFormField(
               controller: _questionController,
@@ -343,10 +441,22 @@ class _PollFormSheetState extends State<_PollFormSheet> {
             ..._optionControllers.asMap().entries.map(
                   (entry) => Padding(
                     padding: const EdgeInsets.only(bottom: 12),
-                    child: TextFormField(
-                      controller: entry.value,
-                      decoration: InputDecoration(labelText: 'Option ${entry.key + 1}'),
-                      validator: (value) => value == null || value.trim().isEmpty ? 'Option required' : null,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            controller: entry.value,
+                            decoration: InputDecoration(labelText: 'Option ${entry.key + 1}'),
+                            validator: (value) =>
+                                value == null || value.trim().isEmpty ? 'Option required' : null,
+                          ),
+                        ),
+                        if (_optionControllers.length > 2)
+                          IconButton(
+                            onPressed: () => _removeOption(entry.key),
+                            icon: const Icon(Icons.close),
+                          ),
+                      ],
                     ),
                   ),
                 ),
@@ -363,7 +473,7 @@ class _PollFormSheetState extends State<_PollFormSheet> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _submit,
-                child: const Text('Create'),
+                child: Text(widget.submitLabel),
               ),
             ),
             const SizedBox(height: 16),
@@ -376,6 +486,13 @@ class _PollFormSheetState extends State<_PollFormSheet> {
   void _addOption() {
     setState(() {
       _optionControllers.add(TextEditingController());
+    });
+  }
+
+  void _removeOption(int index) {
+    setState(() {
+      final controller = _optionControllers.removeAt(index);
+      controller.dispose();
     });
   }
 

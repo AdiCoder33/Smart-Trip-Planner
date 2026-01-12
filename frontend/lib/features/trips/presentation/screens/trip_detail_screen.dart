@@ -2,8 +2,10 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import '../../../../core/connectivity/connectivity_service.dart';
+import '../../../../core/notifications/local_notifications_service.dart';
 import '../../../../core/sync/sync_queue.dart';
 import '../../../../core/sync/sync_service.dart';
+import '../../../auth/presentation/bloc/auth_bloc.dart';
 import '../../data/repositories/collaborators_repository_impl.dart';
 import '../../data/repositories/chat_repository_impl.dart';
 import '../../data/repositories/expenses_repository_impl.dart';
@@ -15,10 +17,12 @@ import '../../domain/usecases/cache_chat_messages.dart';
 import '../../domain/usecases/cache_itinerary_items.dart';
 import '../../domain/usecases/cache_polls.dart';
 import '../../domain/usecases/create_expense.dart';
+import '../../domain/usecases/delete_expense.dart';
 import '../../domain/usecases/get_cached_chat_messages.dart';
 import '../../domain/usecases/get_cached_expenses.dart';
 import '../../domain/usecases/create_itinerary_item.dart';
 import '../../domain/usecases/create_poll.dart';
+import '../../domain/usecases/delete_poll.dart';
 import '../../domain/usecases/get_chat_messages.dart';
 import '../../domain/usecases/get_expense_summary.dart';
 import '../../domain/usecases/delete_itinerary_item.dart';
@@ -36,7 +40,9 @@ import '../../domain/usecases/reorder_itinerary_items.dart';
 import '../../domain/usecases/revoke_invite.dart';
 import '../../domain/usecases/search_trip_users.dart';
 import '../../domain/usecases/send_trip_invite.dart';
+import '../../domain/usecases/update_poll.dart';
 import '../../domain/usecases/update_itinerary_item.dart';
+import '../../domain/usecases/update_expense.dart';
 import '../../domain/usecases/upsert_local_chat_message.dart';
 import '../../domain/usecases/upsert_local_itinerary_item.dart';
 import '../../domain/usecases/upsert_local_poll.dart';
@@ -65,8 +71,10 @@ class TripDetailScreen extends StatelessWidget {
     final chatRepository = context.read<ChatRepositoryImpl>();
     final expensesRepository = context.read<ExpensesRepositoryImpl>();
     final connectivityService = context.read<ConnectivityService>();
+    final notificationsService = context.read<LocalNotificationsService>();
     final syncQueue = context.read<SyncQueue>();
     final syncService = context.read<SyncService>();
+    final currentUserId = context.read<AuthBloc>().state.user?.id;
 
     return MultiBlocProvider(
       providers: [
@@ -92,6 +100,8 @@ class TripDetailScreen extends StatelessWidget {
             getCachedPolls: GetCachedPolls(pollsRepository),
             createPoll: CreatePoll(pollsRepository),
             votePoll: VotePoll(pollsRepository),
+            updatePoll: UpdatePoll(pollsRepository),
+            deletePoll: DeletePoll(pollsRepository),
             cachePolls: CachePolls(pollsRepository),
             upsertLocalPoll: UpsertLocalPoll(pollsRepository),
             deleteLocalPoll: DeleteLocalPoll(pollsRepository),
@@ -119,6 +129,9 @@ class TripDetailScreen extends StatelessWidget {
             upsertLocalChatMessage: UpsertLocalChatMessage(chatRepository),
             chatRepository: chatRepository,
             connectivityService: connectivityService,
+            notificationsService: notificationsService,
+            currentUserId: currentUserId,
+            tripTitle: trip.title,
             syncQueue: syncQueue,
           )..add(ChatStarted(tripId: trip.id)),
         ),
@@ -127,6 +140,8 @@ class TripDetailScreen extends StatelessWidget {
             getExpenses: GetExpenses(expensesRepository),
             getCachedExpenses: GetCachedExpenses(expensesRepository),
             createExpense: CreateExpense(expensesRepository),
+            updateExpense: UpdateExpense(expensesRepository),
+            deleteExpense: DeleteExpense(expensesRepository),
             getExpenseSummary: GetExpenseSummary(expensesRepository),
             cacheExpenses: CacheExpenses(expensesRepository),
             connectivityService: connectivityService,

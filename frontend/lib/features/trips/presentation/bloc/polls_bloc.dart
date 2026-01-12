@@ -13,9 +13,11 @@ import '../../domain/entities/poll.dart';
 import '../../domain/entities/poll_option.dart';
 import '../../domain/usecases/cache_polls.dart';
 import '../../domain/usecases/create_poll.dart';
+import '../../domain/usecases/delete_poll.dart';
 import '../../domain/usecases/delete_local_poll.dart';
 import '../../domain/usecases/get_cached_polls.dart';
 import '../../domain/usecases/get_polls.dart';
+import '../../domain/usecases/update_poll.dart';
 import '../../domain/usecases/upsert_local_poll.dart';
 import '../../domain/usecases/vote_poll.dart';
 
@@ -27,6 +29,8 @@ class PollsBloc extends Bloc<PollsEvent, PollsState> {
   final GetCachedPolls getCachedPolls;
   final CreatePoll createPoll;
   final VotePoll votePoll;
+  final UpdatePoll updatePoll;
+  final DeletePoll deletePoll;
   final CachePolls cachePolls;
   final UpsertLocalPoll upsertLocalPoll;
   final DeleteLocalPoll deleteLocalPoll;
@@ -41,6 +45,8 @@ class PollsBloc extends Bloc<PollsEvent, PollsState> {
     required this.getCachedPolls,
     required this.createPoll,
     required this.votePoll,
+    required this.updatePoll,
+    required this.deletePoll,
     required this.cachePolls,
     required this.upsertLocalPoll,
     required this.deleteLocalPoll,
@@ -52,6 +58,8 @@ class PollsBloc extends Bloc<PollsEvent, PollsState> {
     on<PollsRefreshed>(_onRefreshed);
     on<PollCreated>(_onCreated);
     on<PollVoted>(_onVoted);
+    on<PollUpdated>(_onUpdated);
+    on<PollDeleted>(_onDeleted);
     on<PollsSyncRequested>(_onSyncRequested);
 
     _subscription = connectivityService.onStatusChange.listen((online) {
@@ -136,7 +144,7 @@ class PollsBloc extends Bloc<PollsEvent, PollsState> {
       isActive: true,
       options: options,
       createdAt: DateTime.now(),
-      isPending: !online,
+      isPending: true,
     );
 
     final optimistic = [tempPoll, ...state.polls];
@@ -176,6 +184,20 @@ class PollsBloc extends Bloc<PollsEvent, PollsState> {
   }
 
   Future<void> _onVoted(PollVoted event, Emitter<PollsState> emit) async {
+    if (event.pollId.startsWith('temp-')) {
+      emit(state.copyWith(message: 'Poll is still syncing. Please wait.'));
+      return;
+    }
+    final targetIndex = state.polls.indexWhere((poll) => poll.id == event.pollId);
+    if (targetIndex == -1) {
+      return;
+    }
+    final target = state.polls[targetIndex];
+    if (target.isPending || target.id.startsWith('temp-')) {
+      emit(state.copyWith(message: 'Poll is still syncing. Please wait.'));
+      return;
+    }
+
     final online = await connectivityService.isOnline();
     final previous = state.polls;
     final updatedPolls = state.polls.map((poll) {
@@ -211,6 +233,55 @@ class PollsBloc extends Bloc<PollsEvent, PollsState> {
     } catch (error) {
       final message = error is AppException ? error.message : 'Failed to submit vote';
       await cachePolls(event.tripId, previous);
+      emit(state.copyWith(polls: previous, message: message));
+    }
+  }
+
+  Future<void> _onUpdated(PollUpdated event, Emitter<PollsState> emit) async {
+    final online = await connectivityService.isOnline();
+    if (!online) {
+      emit(state.copyWith(message: 'You are offline. Editing polls is disabled.'));
+      return;
+    }
+
+    try {
+      final updated = await updatePoll(
+        pollId: event.pollId,
+        tripId: event.tripId,
+        question: event.question,
+        options: event.options,
+      );
+      final updatedPolls = state.polls.map((poll) {
+        if (poll.id == updated.id) {
+          return updated;
+        }
+        return poll;
+      }).toList();
+      await upsertLocalPoll(updated);
+      emit(state.copyWith(polls: updatedPolls, message: 'Poll updated.'));
+    } catch (error) {
+      final message = error is AppException ? error.message : 'Failed to update poll';
+      emit(state.copyWith(message: message));
+    }
+  }
+
+  Future<void> _onDeleted(PollDeleted event, Emitter<PollsState> emit) async {
+    final online = await connectivityService.isOnline();
+    if (!online) {
+      emit(state.copyWith(message: 'You are offline. Deleting polls is disabled.'));
+      return;
+    }
+
+    final previous = state.polls;
+    final updated = previous.where((poll) => poll.id != event.pollId).toList();
+    emit(state.copyWith(polls: updated));
+
+    try {
+      await deletePoll(pollId: event.pollId);
+      await deleteLocalPoll(event.pollId);
+      emit(state.copyWith(message: 'Poll deleted.'));
+    } catch (error) {
+      final message = error is AppException ? error.message : 'Failed to delete poll';
       emit(state.copyWith(polls: previous, message: message));
     }
   }

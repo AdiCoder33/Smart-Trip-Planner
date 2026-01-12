@@ -41,3 +41,35 @@ class ExpenseCreated extends ExpensesEvent {
   @override
   List<Object?> get props => [tripId, title, amount, currency];
 }
+
+class ExpenseUpdated extends ExpensesEvent {
+  final String tripId;
+  final String expenseId;
+  final String title;
+  final double amount;
+  final String currency;
+
+  const ExpenseUpdated({
+    required this.tripId,
+    required this.expenseId,
+    required this.title,
+    required this.amount,
+    required this.currency,
+  });
+
+  @override
+  List<Object?> get props => [tripId, expenseId, title, amount, currency];
+}
+
+class ExpenseDeleted extends ExpensesEvent {
+  final String tripId;
+  final String expenseId;
+
+  const ExpenseDeleted({
+    required this.tripId,
+    required this.expenseId,
+  });
+
+  @override
+  List<Object?> get props => [tripId, expenseId];
+}

@@ -9,9 +9,11 @@ import 'package:smart_trip_planner/features/trips/domain/entities/poll.dart';
 import 'package:smart_trip_planner/features/trips/domain/entities/poll_option.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/cache_polls.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/create_poll.dart';
+import 'package:smart_trip_planner/features/trips/domain/usecases/delete_poll.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/delete_local_poll.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/get_cached_polls.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/get_polls.dart';
+import 'package:smart_trip_planner/features/trips/domain/usecases/update_poll.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/upsert_local_poll.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/vote_poll.dart';
 import 'package:smart_trip_planner/features/trips/presentation/bloc/polls_bloc.dart';
@@ -23,6 +25,10 @@ class MockGetCachedPolls extends Mock implements GetCachedPolls {}
 class MockCreatePoll extends Mock implements CreatePoll {}
 
 class MockVotePoll extends Mock implements VotePoll {}
+
+class MockUpdatePoll extends Mock implements UpdatePoll {}
+
+class MockDeletePoll extends Mock implements DeletePoll {}
 
 class MockCachePolls extends Mock implements CachePolls {}
 
@@ -52,6 +58,8 @@ void main() {
   late MockGetCachedPolls getCachedPolls;
   late MockCreatePoll createPoll;
   late MockVotePoll votePoll;
+  late MockUpdatePoll updatePoll;
+  late MockDeletePoll deletePoll;
   late MockCachePolls cachePolls;
   late MockUpsertLocalPoll upsertLocalPoll;
   late MockDeleteLocalPoll deleteLocalPoll;
@@ -65,6 +73,8 @@ void main() {
       getCachedPolls: getCachedPolls,
       createPoll: createPoll,
       votePoll: votePoll,
+      updatePoll: updatePoll,
+      deletePoll: deletePoll,
       cachePolls: cachePolls,
       upsertLocalPoll: upsertLocalPoll,
       deleteLocalPoll: deleteLocalPoll,
@@ -79,6 +89,8 @@ void main() {
     getCachedPolls = MockGetCachedPolls();
     createPoll = MockCreatePoll();
     votePoll = MockVotePoll();
+    updatePoll = MockUpdatePoll();
+    deletePoll = MockDeletePoll();
     cachePolls = MockCachePolls();
     upsertLocalPoll = MockUpsertLocalPoll();
     deleteLocalPoll = MockDeleteLocalPoll();

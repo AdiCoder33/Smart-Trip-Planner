@@ -55,6 +55,33 @@ class PollVoted extends PollsEvent {
   List<Object?> get props => [tripId, pollId, optionId];
 }
 
+class PollUpdated extends PollsEvent {
+  final String tripId;
+  final String pollId;
+  final String question;
+  final List<String> options;
+
+  const PollUpdated({
+    required this.tripId,
+    required this.pollId,
+    required this.question,
+    required this.options,
+  });
+
+  @override
+  List<Object?> get props => [tripId, pollId, question, options];
+}
+
+class PollDeleted extends PollsEvent {
+  final String tripId;
+  final String pollId;
+
+  const PollDeleted({required this.tripId, required this.pollId});
+
+  @override
+  List<Object?> get props => [tripId, pollId];
+}
+
 class PollsSyncRequested extends PollsEvent {
   final String tripId;
 

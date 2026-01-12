@@ -26,4 +26,8 @@ class ExpensesLocalDataSource {
   Future<void> upsertExpense(ExpenseModel expense) async {
     await box.put(expense.id, expense);
   }
+
+  Future<void> deleteExpense(String expenseId) async {
+    await box.delete(expenseId);
+  }
 }

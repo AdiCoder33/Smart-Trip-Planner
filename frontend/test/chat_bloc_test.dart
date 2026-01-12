@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 
 import 'package:smart_trip_planner/core/connectivity/connectivity_service.dart';
+import 'package:smart_trip_planner/core/notifications/local_notifications_service.dart';
 import 'package:smart_trip_planner/core/sync/pending_action.dart';
 import 'package:smart_trip_planner/core/sync/sync_queue.dart';
 import 'package:smart_trip_planner/features/trips/domain/entities/chat_message.dart';
@@ -30,6 +31,8 @@ class MockChatRepository extends Mock implements ChatRepository {}
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
 class MockSyncQueue extends Mock implements SyncQueue {}
+
+class MockLocalNotificationsService extends Mock implements LocalNotificationsService {}
 
 void main() {
   setUpAll(() {
@@ -59,6 +62,7 @@ void main() {
   late MockChatRepository chatRepository;
   late MockConnectivityService connectivityService;
   late MockSyncQueue syncQueue;
+  late MockLocalNotificationsService notificationsService;
 
   ChatBloc buildBloc() {
     return ChatBloc(
@@ -69,6 +73,9 @@ void main() {
       upsertLocalChatMessage: upsertLocalChatMessage,
       chatRepository: chatRepository,
       connectivityService: connectivityService,
+      notificationsService: notificationsService,
+      currentUserId: 'user',
+      tripTitle: 'Trip',
       syncQueue: syncQueue,
     );
   }
@@ -82,8 +89,13 @@ void main() {
     chatRepository = MockChatRepository();
     connectivityService = MockConnectivityService();
     syncQueue = MockSyncQueue();
+    notificationsService = MockLocalNotificationsService();
     when(() => connectivityService.onStatusChange).thenAnswer((_) => const Stream.empty());
     when(() => chatRepository.disconnect()).thenAnswer((_) async {});
+    when(() => notificationsService.showChatNotification(
+          title: any(named: 'title'),
+          body: any(named: 'body'),
+        )).thenAnswer((_) async {});
   });
 
   final cachedMessage = ChatMessageEntity(
