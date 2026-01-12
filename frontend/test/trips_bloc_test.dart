@@ -6,8 +6,10 @@ import 'package:smart_trip_planner/core/connectivity/connectivity_service.dart';
 import 'package:smart_trip_planner/core/errors/app_exception.dart';
 import 'package:smart_trip_planner/features/trips/domain/entities/trip.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/create_trip.dart';
+import 'package:smart_trip_planner/features/trips/domain/usecases/delete_trip.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/get_cached_trips.dart';
 import 'package:smart_trip_planner/features/trips/domain/usecases/get_trips.dart';
+import 'package:smart_trip_planner/features/trips/domain/usecases/update_trip.dart';
 import 'package:smart_trip_planner/features/trips/presentation/bloc/trips_bloc.dart';
 
 class MockGetTrips extends Mock implements GetTrips {}
@@ -16,12 +18,18 @@ class MockGetCachedTrips extends Mock implements GetCachedTrips {}
 
 class MockCreateTrip extends Mock implements CreateTrip {}
 
+class MockUpdateTrip extends Mock implements UpdateTrip {}
+
+class MockDeleteTrip extends Mock implements DeleteTrip {}
+
 class MockConnectivityService extends Mock implements ConnectivityService {}
 
 void main() {
   late MockGetTrips getTrips;
   late MockGetCachedTrips getCachedTrips;
   late MockCreateTrip createTrip;
+  late MockUpdateTrip updateTrip;
+  late MockDeleteTrip deleteTrip;
   late MockConnectivityService connectivityService;
   late TripsBloc tripsBloc;
 
@@ -29,11 +37,15 @@ void main() {
     getTrips = MockGetTrips();
     getCachedTrips = MockGetCachedTrips();
     createTrip = MockCreateTrip();
+    updateTrip = MockUpdateTrip();
+    deleteTrip = MockDeleteTrip();
     connectivityService = MockConnectivityService();
     tripsBloc = TripsBloc(
       getTrips: getTrips,
       getCachedTrips: getCachedTrips,
       createTrip: createTrip,
+      updateTrip: updateTrip,
+      deleteTrip: deleteTrip,
       connectivityService: connectivityService,
     );
   });

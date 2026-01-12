@@ -20,4 +20,8 @@ class TripsLocalDataSource {
   Future<void> upsertTrip(TripModel trip) async {
     await box.put(trip.id, trip);
   }
+
+  Future<void> deleteTrip(String tripId) async {
+    await box.delete(tripId);
+  }
 }

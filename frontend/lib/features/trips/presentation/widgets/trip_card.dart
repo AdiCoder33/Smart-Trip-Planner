@@ -5,8 +5,9 @@ import '../../domain/entities/trip.dart';
 class TripCard extends StatelessWidget {
   final TripEntity trip;
   final VoidCallback? onTap;
+  final VoidCallback? onMenu;
 
-  const TripCard({super.key, required this.trip, this.onTap});
+  const TripCard({super.key, required this.trip, this.onTap, this.onMenu});
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +66,15 @@ class TripCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trip.isPending) const _PendingBadge() else const Icon(Icons.chevron_right),
+              if (trip.isPending)
+                const _PendingBadge()
+              else if (onMenu != null)
+                IconButton(
+                  onPressed: onMenu,
+                  icon: const Icon(Icons.more_vert),
+                )
+              else
+                const Icon(Icons.chevron_right),
             ],
           ),
         ),

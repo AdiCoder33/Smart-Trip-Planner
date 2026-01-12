@@ -52,4 +52,37 @@ class TripsRepositoryImpl implements TripsRepository {
       throw mapDioError(error);
     }
   }
+
+  @override
+  Future<TripEntity> updateTrip({
+    required String tripId,
+    required String title,
+    String? destination,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
+    try {
+      final trip = await remoteDataSource.updateTrip(
+        tripId: tripId,
+        title: title,
+        destination: destination,
+        startDate: startDate,
+        endDate: endDate,
+      );
+      await localDataSource.upsertTrip(trip);
+      return trip;
+    } catch (error) {
+      throw mapDioError(error);
+    }
+  }
+
+  @override
+  Future<void> deleteTrip({required String tripId}) async {
+    try {
+      await remoteDataSource.deleteTrip(tripId);
+      await localDataSource.deleteTrip(tripId);
+    } catch (error) {
+      throw mapDioError(error);
+    }
+  }
 }

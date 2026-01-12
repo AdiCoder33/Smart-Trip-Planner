@@ -47,8 +47,10 @@ import 'features/trips/data/repositories/itinerary_repository_impl.dart';
 import 'features/trips/data/repositories/polls_repository_impl.dart';
 import 'features/trips/data/repositories/trips_repository_impl.dart';
 import 'features/trips/domain/usecases/create_trip.dart';
+import 'features/trips/domain/usecases/delete_trip.dart';
 import 'features/trips/domain/usecases/get_cached_trips.dart';
 import 'features/trips/domain/usecases/get_trips.dart';
+import 'features/trips/domain/usecases/update_trip.dart';
 import 'features/trips/presentation/bloc/trips_bloc.dart';
 import 'features/trips/presentation/screens/trips_list_screen.dart';
 
@@ -211,6 +213,8 @@ class SmartTripPlannerApp extends StatelessWidget {
               getTrips: GetTrips(tripsRepository),
               getCachedTrips: GetCachedTrips(tripsRepository),
               createTrip: CreateTrip(tripsRepository),
+              updateTrip: UpdateTrip(tripsRepository),
+              deleteTrip: DeleteTrip(tripsRepository),
               connectivityService: connectivityService,
             ),
           ),

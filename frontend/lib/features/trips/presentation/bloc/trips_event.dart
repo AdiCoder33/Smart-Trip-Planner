@@ -31,3 +31,31 @@ class TripCreated extends TripsEvent {
   @override
   List<Object?> get props => [title, destination, startDate, endDate];
 }
+
+class TripUpdated extends TripsEvent {
+  final String tripId;
+  final String title;
+  final String? destination;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const TripUpdated({
+    required this.tripId,
+    required this.title,
+    this.destination,
+    this.startDate,
+    this.endDate,
+  });
+
+  @override
+  List<Object?> get props => [tripId, title, destination, startDate, endDate];
+}
+
+class TripDeleted extends TripsEvent {
+  final String tripId;
+
+  const TripDeleted({required this.tripId});
+
+  @override
+  List<Object?> get props => [tripId];
+}

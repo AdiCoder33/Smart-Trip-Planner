@@ -72,7 +72,20 @@ class _TripsListScreenState extends State<TripsListScreen> {
                 showModalBottomSheet<void>(
                   context: context,
                   isScrollControlled: true,
-                  builder: (_) => const _CreateTripSheet(),
+                  builder: (_) => _TripFormSheet(
+                    title: 'Create Trip',
+                    submitLabel: 'Create',
+                    onSubmit: (title, destination, startDate, endDate) {
+                      context.read<TripsBloc>().add(
+                            TripCreated(
+                              title: title,
+                              destination: destination,
+                              startDate: startDate,
+                              endDate: endDate,
+                            ),
+                          );
+                    },
+                  ),
                 );
               },
               child: const Icon(Icons.add),
@@ -115,6 +128,7 @@ class _TripsListScreenState extends State<TripsListScreen> {
                         return TripCard(
                           trip: trip,
                           onTap: () => _openDetail(context, trip),
+                          onMenu: () => _showTripActions(context, trip),
                         );
                       },
                     ),
@@ -131,6 +145,87 @@ class _TripsListScreenState extends State<TripsListScreen> {
   void _openDetail(BuildContext context, TripEntity trip) {
     Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => TripDetailScreen(trip: trip)),
+    );
+  }
+
+  void _showTripActions(BuildContext context, TripEntity trip) {
+    if (trip.isPending) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Trip is syncing. Please wait.')),
+      );
+      return;
+    }
+    showModalBottomSheet<void>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.edit_outlined),
+              title: const Text('Edit trip'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _showEditTrip(context, trip);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.delete_outline),
+              title: const Text('Delete trip'),
+              onTap: () {
+                Navigator.of(context).pop();
+                _confirmDelete(context, trip);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditTrip(BuildContext context, TripEntity trip) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _TripFormSheet(
+        title: 'Edit Trip',
+        submitLabel: 'Save',
+        initialTitle: trip.title,
+        initialDestination: trip.destination,
+        initialStartDate: trip.startDate,
+        initialEndDate: trip.endDate,
+        onSubmit: (title, destination, startDate, endDate) {
+          context.read<TripsBloc>().add(
+                TripUpdated(
+                  tripId: trip.id,
+                  title: title,
+                  destination: destination,
+                  startDate: startDate,
+                  endDate: endDate,
+                ),
+              );
+        },
+      ),
+    );
+  }
+
+  void _confirmDelete(BuildContext context, TripEntity trip) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete trip'),
+        content: const Text('This action cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.read<TripsBloc>().add(TripDeleted(tripId: trip.id));
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -189,19 +284,50 @@ class _TripsHeader extends StatelessWidget {
   }
 }
 
-class _CreateTripSheet extends StatefulWidget {
-  const _CreateTripSheet();
+class _TripFormSheet extends StatefulWidget {
+  final String title;
+  final String submitLabel;
+  final String? initialTitle;
+  final String? initialDestination;
+  final DateTime? initialStartDate;
+  final DateTime? initialEndDate;
+  final void Function(
+    String title,
+    String? destination,
+    DateTime? startDate,
+    DateTime? endDate,
+  ) onSubmit;
+
+  const _TripFormSheet({
+    required this.title,
+    required this.submitLabel,
+    required this.onSubmit,
+    this.initialTitle,
+    this.initialDestination,
+    this.initialStartDate,
+    this.initialEndDate,
+  });
 
   @override
-  State<_CreateTripSheet> createState() => _CreateTripSheetState();
+  State<_TripFormSheet> createState() => _TripFormSheetState();
 }
 
-class _CreateTripSheetState extends State<_CreateTripSheet> {
+class _TripFormSheetState extends State<_TripFormSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _titleController = TextEditingController();
-  final _destinationController = TextEditingController();
+  late final TextEditingController _titleController;
+  late final TextEditingController _destinationController;
   DateTime? _startDate;
   DateTime? _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController(text: widget.initialTitle ?? '');
+    _destinationController =
+        TextEditingController(text: widget.initialDestination ?? '');
+    _startDate = widget.initialStartDate;
+    _endDate = widget.initialEndDate;
+  }
 
   @override
   void dispose() {
@@ -224,7 +350,7 @@ class _CreateTripSheetState extends State<_CreateTripSheet> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('Create Trip', style: Theme.of(context).textTheme.titleLarge),
+            Text(widget.title, style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 16),
             TextFormField(
               controller: _titleController,
@@ -255,7 +381,7 @@ class _CreateTripSheetState extends State<_CreateTripSheet> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _submit,
-                child: const Text('Create'),
+                child: Text(widget.submitLabel),
               ),
             ),
             const SizedBox(height: 16),
@@ -270,16 +396,13 @@ class _CreateTripSheetState extends State<_CreateTripSheet> {
       return;
     }
 
-    context.read<TripsBloc>().add(
-          TripCreated(
-            title: _titleController.text.trim(),
-            destination: _destinationController.text.trim().isEmpty
-                ? null
-                : _destinationController.text.trim(),
-            startDate: _startDate,
-            endDate: _endDate,
-          ),
-        );
+    final destination = _destinationController.text.trim();
+    widget.onSubmit(
+      _titleController.text.trim(),
+      destination.isEmpty ? null : destination,
+      _startDate,
+      _endDate,
+    );
 
     Navigator.of(context).pop();
   }
