@@ -4,7 +4,7 @@
 
 ### Plan, Collaborate, and Manage Your Trips Seamlessly
 
-[![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![Python](https://img.shields.io/badge/Python-3.11+-3776AB? style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Flutter](https://img.shields.io/badge/Flutter-3.0+-02569B?style=for-the-badge&logo=flutter&logoColor=white)](https://flutter.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-336791?style=for-the-badge&logo=postgresql&logoColor=white)](https://www.postgresql.org/)
@@ -59,11 +59,23 @@
 
 <div align="center">
 
-| **Backend** | **Frontend** | **Infrastructure** |
-|:-----------:|: ------------:|:------------------:|
-| ![FastAPI](https://img.shields.io/badge/FastAPI-009688? style=flat&logo=fastapi&logoColor=white) | ![Flutter](https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white) | ![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white) |
-| ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=flat&logo=postgresql&logoColor=white) | ![Dart](https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white) | ![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat&logo=github-actions&logoColor=white) |
-| ![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=flat&logo=sqlalchemy&logoColor=white) | ![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=flat&logo=socketdotio&logoColor=white) | ![Render](https://img.shields.io/badge/Render-46E3B7?style=flat&logo=render&logoColor=white) |
+### Backend
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-336791?style=for-the-badge&logo=postgresql&logoColor=white)
+![SQLAlchemy](https://img.shields.io/badge/SQLAlchemy-D71F00?style=for-the-badge&logo=sqlalchemy&logoColor=white)
+
+### Frontend
+![Flutter](https://img.shields.io/badge/Flutter-02569B?style=for-the-badge&logo=flutter&logoColor=white)
+![Dart](https://img.shields.io/badge/Dart-0175C2?style=for-the-badge&logo=dart&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
+![CSS3](https://img.shields.io/badge/CSS3-1572B6?style=for-the-badge&logo=css3&logoColor=white)
+
+### Infrastructure & DevOps
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=for-the-badge&logo=github-actions&logoColor=white)
+![Render](https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white)
+![WebSocket](https://img.shields.io/badge/WebSocket-010101?style=for-the-badge&logo=socketdotio&logoColor=white)
 
 </div>
 
@@ -90,7 +102,7 @@ cp .env.example .env
 docker compose up --build
 ```
 
-> 🌐 **API Documentation**:  Visit `http://localhost:8000/api/docs` after startup
+> 🌐 **API Documentation**: Visit `http://localhost:8000/api/docs` after startup
 
 ### 📱 Frontend Setup
 
@@ -129,7 +141,7 @@ python -m pytest
 
 **For local testing** (outside Docker):
 ```bash
-DATABASE_URL=postgres://smart_trip_planner:smart_trip_planner@localhost:5432/smart_trip_planner python -m pytest
+DATABASE_URL=postgres://smart_trip_planner:smart_trip_planner@localhost: 5432/smart_trip_planner python -m pytest
 ```
 
 ### 📱 Frontend Tests
@@ -168,7 +180,7 @@ flutter analyze
 
 ## 💬 WebSocket Chat
 
-Connect to real-time chat using:
+Connect to real-time chat using: 
 
 ```
 ws://localhost:8000/ws/trips/<trip_id>/chat/? token=<JWT_ACCESS>
@@ -248,7 +260,7 @@ ALLOWED_HOSTS=localhost,127.0.0.1,10.0.2.2
 # Email (optional)
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_USER=your-email@gmail. com
+SMTP_USER=your-email@gmail.com
 SMTP_PASSWORD=your-app-password
 ```
 
@@ -265,7 +277,7 @@ Once the backend is running, explore the interactive API docs:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request. 
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 1. 🍴 Fork the repository
 2. 🌿 Create your feature branch (`git checkout -b feature/AmazingFeature`)
